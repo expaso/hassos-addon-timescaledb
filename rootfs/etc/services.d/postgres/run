@@ -1,0 +1,38 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Start PostgreSQL service if enabled
+# ==============================================================================
+postgres_data=/data/databases
+new_install=false
+
+# Init mariadb
+if ! bashio::fs.directory_exists "${postgres_data}"; then
+    bashio::log.info "Create a new PostgreSQL initial system"
+	#init db here
+    #mysql_install_db --user=root --datadir="${MARIADB_DATA}" --skip-name-resolve --skip-test-db > /dev/null
+    new_install=true
+	mkdir -p ${postgres_data}
+	chown -R postgres:postgres ${postgres_data}
+	chmod 700 ${postgres_data}
+else
+    bashio::log.info "Using existing PostgreSQL installation"
+fi
+
+
+# Set default secure values after inital setup
+if bashio::var.true "${new_install}"; then
+    bashio::log.info "Initializing postgres directory"
+	su - postgres -c "initdb -D ${postgres_data}"
+fi
+
+mkdir /run/postgresql
+chown -R postgres:postgres /run/postgresql
+#chmod 700 /run/posgresql
+
+
+# Start postgreSQL
+bashio::log.info "Starting PostgreSQL"
+su - postgres -c "postgres -D ${postgres_data}" &
+postgres_pid=$!
+
+wait "${postgres_pid}"
