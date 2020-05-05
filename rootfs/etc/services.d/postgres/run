@@ -2,14 +2,13 @@
 # ==============================================================================
 # Start PostgreSQL service if enabled
 # ==============================================================================
-postgres_data=/data/databases
+postgres_data=/data/postgres
 new_install=false
 
 # Init mariadb
 if ! bashio::fs.directory_exists "${postgres_data}"; then
     bashio::log.info "Create a new PostgreSQL initial system"
-	#init db here
-    #mysql_install_db --user=root --datadir="${MARIADB_DATA}" --skip-name-resolve --skip-test-db > /dev/null
+	# Create postgress directory in data directory
     new_install=true
 	mkdir -p ${postgres_data}
 	chown -R postgres:postgres ${postgres_data}
@@ -18,21 +17,30 @@ else
     bashio::log.info "Using existing PostgreSQL installation"
 fi
 
-
 # Set default secure values after inital setup
 if bashio::var.true "${new_install}"; then
     bashio::log.info "Initializing postgres directory"
 	su - postgres -c "initdb -D ${postgres_data}"
+	# Set timescaledb as being enabled in the postgres config file.
+	sed -r -i "s/[#]*\s*(shared_preload_libraries)\s*=\s*'(.*)'/\1 = 'timescaledb,\2'/;s/,'/'/" ${postgres_data}/postgresql.conf
 fi
 
+# Create run directory for postgressSQL
 mkdir /run/postgresql
 chown -R postgres:postgres /run/postgresql
-#chmod 700 /run/posgresql
 
-
-# Start postgreSQL
+# Start postgreSQL with timescaledb enabled.
 bashio::log.info "Starting PostgreSQL"
 su - postgres -c "postgres -D ${postgres_data}" &
 postgres_pid=$!
 
+# Wait for postgres to become availale..
+sleep 3
+
+# Install the TimescaleDB extension
+POSTGRES_USER=postgres
+/usr/share/timescaledb/000_install_timescaledb.sh
+/usr/share/timescaledb/001_reenable_auth.sh
+
+# And let it roll
 wait "${postgres_pid}"

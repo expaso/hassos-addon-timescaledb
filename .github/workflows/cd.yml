@@ -1,0 +1,60 @@
+name: Continuous deployment
+
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags: [v*]
+
+jobs:
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build and push tagged Docker image
+        run: |
+          ADDON_VERSION=$( cut -c12- <<< ${{ github.ref }} )
+          sed -i "s/dev/$ADDON_VERSION/g" config.json
+          docker run --rm --privileged \
+            -v ~/.docker:/root/.docker \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$(pwd)":/data homeassistant/amd64-builder \
+            --target timescaledb --all \
+            --docker-user ${{ secrets.DOCKER_USERNAME }} \
+            --docker-password ${{ secrets.DOCKER_PASSWORD }}
+
+  # publish:
+  #   needs: build
+  #   name: Publish release
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout add-on code
+  #       uses: actions/checkout@v2
+  #       with:
+  #         persist-credentials: false
+  #         path: addon
+  #     - name: Checkout repository code
+  #       uses: actions/checkout@v2
+  #       with:
+  #         persist-credentials: false
+  #         repository: filii-lamberti/repository
+  #         path: repository
+  #     - name: Create local changes and commit files
+  #       continue-on-error: true
+  #       run: |
+  #         ADDON_NAME=$( cut -c22- <<< ${{ github.repository }} )
+  #         ADDON_VERSION=$( cut -c12- <<< ${{ github.ref }} )
+  #         cp -v addon/README.md addon/filiibot/config.json repository/filiibot/
+  #         cd repository
+  #         sed -i "s/dev/$ADDON_VERSION/g" filiibot/config.json
+  #         git config --local user.email "filii.lamberti@gmail.com"
+  #         git config --local user.name "Filii Lamberti"
+  #         git add .
+  #         git commit -m "Upgrade $ADDON_NAME to v$ADDON_VERSION" -a
+  #     - name: Push changes
+  #       uses: ad-m/github-push-action@master
+  #       with:
+  #         github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+  #         directory: repository
+  #         repository: filii-lamberti/repository

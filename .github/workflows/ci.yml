@@ -1,0 +1,51 @@
+name: Continuous integration
+
+on:
+  push:
+    # Sequence of patterns matched against refs/heads
+    branches: [master]
+
+jobs:
+  # lint:
+  #   name: Lint code
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+  #     - name: Use Node.js
+  #       uses: actions/setup-node@v1
+  #       with:
+  #         node-version: "12.x"
+  #     - name: Install ESLint and dependencies
+  #       run: yarn install
+  #       working-directory: ./filiibot/rootfs/opt/filiibot
+  #     - name: Run ESLint
+  #       run: node_modules/eslint/bin/eslint.js bot.js
+  #       working-directory: ./filiibot/rootfs/opt/filiibot
+
+  test:
+#    needs: lint
+    name: Test code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build image 
+        run: |
+          sed -i "s/dev/latest/g" config.json
+          docker run --rm --privileged \
+            -v ~/.docker:/root/.docker \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$(pwd)":/data homeassistant/amd64-builder \
+            --target timescaledb --amd64 \
+            --docker-user ${{ secrets.DOCKER_USERNAME }} \
+            --docker-password ${{ secrets.DOCKER_PASSWORD }}
+
+  update_release_draft:
+    name: Release Drafter
+    runs-on: ubuntu-latest
+    steps:
+      # Drafts your next Release notes as Pull Requests are merged into "master"
+      - uses: release-drafter/release-drafter@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
