@@ -1,6 +1,6 @@
 {
   "name": "TimescaleDB",
-  "version": "1.1.0",
+  "version": "dev",
   "stage": "experimental",
   "slug": "timescaledb",
   "description": "TimescaleDB: An open-source database built on PostgreSQL for analyzing time-series data with the power and convenience of SQL",
