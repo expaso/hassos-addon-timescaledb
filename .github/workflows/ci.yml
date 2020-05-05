@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Build image 
         run: |
-          sed -i "s/dev/latest/g" config.json
+          sed -i "s/dev/latest/g" timescaledb/config.json
           docker run --rm --privileged \
             -v ~/.docker:/root/.docker \
             -v /var/run/docker.sock:/var/run/docker.sock \
