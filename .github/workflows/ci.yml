@@ -32,11 +32,12 @@ jobs:
         uses: actions/checkout@v2
       - name: Build image 
         run: |
-          #sed -i "s/dev/latest/" timescaledb/config.json
+          sed -i "s/dev/latest/g" timescaledb/config.json
           docker run --rm --privileged \
             -v ~/.docker:/root/.docker \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$(pwd)":/data homeassistant/amd64-builder \
+            --test \
             --target timescaledb --amd64 \
             --docker-user ${{ secrets.DOCKER_USERNAME }} \
             --docker-password ${{ secrets.DOCKER_PASSWORD }}

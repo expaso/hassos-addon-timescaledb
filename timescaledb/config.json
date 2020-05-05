@@ -27,5 +27,6 @@
     "databases": ["str"],
     "logins": [{ "username": "str", "password": "str" }],
     "rights": [{ "username": "str", "database": "str" }]
-  }
+  },
+  "image": "husselhans/hassos-addon-timescaledb-{arch}"
 }
