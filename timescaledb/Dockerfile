@@ -41,8 +41,13 @@ RUN apk add --no-cache \
     postgresql \
 	postgresql-dev
 
+# Create it's run directory
+RUN mkdir /run/postgresql \
+	&& chown -R postgres:postgres /run/postgresql
 
+# Copy over the tools
 COPY --from=tools /go/bin/* /usr/local/bin/
+
 # --------------------------------------
 # Build TimescaleDB
 # --------------------------------------

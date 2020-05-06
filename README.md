@@ -42,22 +42,15 @@ Start the add-on, check the logs of the add-on to see if everything went well.
 Example add-on configuration:
 
 ```
-{
-"databases": [{ homeassistant"} ],
-"logins": [{ "username": "homeassistant", "password": null, "timescaledb": true }],
-"rights": [
-	{
-	"username": "homeassistant",
-	"database": "homeassistant"
-	}
-],
-"timescaledb": 
-	{ 
-	"telemetry": "basic",
-	"maxmemory": "512MB",
-	"maxcpus": "4"
-	}
-}
+ {
+    "databases": ["homeassistant"],
+    "timescale_enabled": ["homeassistant"],
+    "timescaledb": { 
+      "telemetry": "basic",
+      "maxmemory": "512MB",
+      "maxcpus": "4"
+      }
+ }
 ```
 
 ### Option: `databases`
@@ -100,7 +93,30 @@ for further tuning. Your Postgres.config file it located in the addon's data dir
 
 You are now ready to start using Postgres with TimescaleDb extenstions enabled!
 
+Seeking a nice web-based client? **Try the pgAdmin4 addon.**
+
 Please do not forget to also map the TCP/IP port in the network-section of the addon to the desired port number.
 The default is port `5432`
 
-Seeking a nice web-ased client? **Try the pgAdmin4 addon.**
+__Securiy Notice!__
+
+The default username is `postgres` with an __empty password__.
+Make sure you change this immediately after activating the add-on:
+
+```
+ALTER USER user_name WITH PASSWORD 'strongpassword';
+```
+
+A default `pg_hba.conf` is created in the data directory with the following content, which allows local peer usrs and network users with passwords.:
+
+```
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+host    all             all             0.0.0.0/0               md5"
+local   all             all             0.0.0.0/0               md5"
+local   all             all             0.0.0.0/0               peer"
+```
+
+Please review this configuration carefully by examine the docs:
+https://www.postgresql.org/docs/devel/auth-pg-hba-conf.html
+
+

@@ -16,6 +16,7 @@
   "options": {
     "databases": ["homeassistant"],
     "timescale_enabled": ["homeassistant"],
+    
     "timescaledb": { 
       "telemetry": "basic",
       "maxmemory": "512MB",
