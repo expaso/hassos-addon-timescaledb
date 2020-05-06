@@ -1,5 +1,4 @@
 # HassOS Addon: [TimescaleDB](https://www.timescale.com/)
-
 ## [PostgreSql](https://www.postgresql.org/) + [Postgis](https://postgis.net/) + [TimescaleDB](https://www.timescale.com/)
 
 Say, you wanted to record all those nice Home Assistant measurements from your house into a decent store, so you can run all kinds of queries on it
