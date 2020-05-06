@@ -43,8 +43,9 @@ jobs:
       - name: Create local changes and commit files
         continue-on-error: true
         run: |
-          ADDON_NAME=$( cut -c22- <<< ${{ github.repository }} )
+          ADDON_NAME=$( cut -c21- <<< ${{ github.repository }} )
           ADDON_VERSION=$( cut -c12- <<< ${{ github.ref }} )
+          mkdir -p repository/timescaledb
           cp -v addon/README.md addon/timescaledb/config.json repository/timescaledb
           cd repository
           sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.json
