@@ -41,7 +41,7 @@ jobs:
           repository: Expaso/hassos-addons
           path: repository
       - name: Create local changes and commit files
-        continue-on-error: true
+        continue-on-error: false
         run: |
           ADDON_NAME=$( cut -c21- <<< ${{ github.repository }} )
           ADDON_VERSION=$( cut -c12- <<< ${{ github.ref }} )
