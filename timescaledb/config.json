@@ -3,7 +3,7 @@
   "version": "dev",
   "stage": "experimental",
   "slug": "timescaledb",
-  "description": "TimescaleDB: An open-source database built on PostgreSQL for analyzing time-series data with the power and convenience of SQL",
+  "description": "An open-source database built on PostgreSQL for analyzing time-series data with the power and convenience of SQL",
   "url": "https://github.com/Expaso/hassos-addon-timescaledb",
   "arch": ["aarch64", "amd64"],
   "startup": "system",
@@ -15,18 +15,29 @@
   },
   "options": {
     "databases": ["homeassistant"],
-    "logins": [{ "username": "homeassistant", "password": null }],
+    "logins": [{ "username": "homeassistant", "password": null, "timescaledb": true }],
     "rights": [
       {
         "username": "homeassistant",
         "database": "homeassistant"
       }
-    ]
+	],
+	"timescaledb": 
+		{ 
+      "telemetry": "basic",
+      "maxmemory": "512MB",
+      "maxcpus": "4"
+		}
   },
   "schema": {
     "databases": ["str"],
-    "logins": [{ "username": "str", "password": "str" }],
-    "rights": [{ "username": "str", "database": "str" }]
+    "logins": [{ "username": "str", "password": "str", "timescaledb": "bool" }],
+	"rights": [{ "username": "str", "database": "str" }],
+  "timescaledb": 
+    {	"telemetry": "list(off|basic)",
+      "maxmemory": "str?",
+      "maxcpus": "int(1,)?"
+    }
   },
-  "image": "husselhans/hassos-addon-timescaledb-{arch}"
+  "imageaftercd": "husselhans/hassos-addon-timescaledb-{arch}"
 }

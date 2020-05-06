@@ -46,9 +46,10 @@ jobs:
           ADDON_NAME=$( cut -c21- <<< ${{ github.repository }} )
           ADDON_VERSION=$( cut -c12- <<< ${{ github.ref }} )
           mkdir -p repository/timescaledb
-          cp -v addon/README.md addon/timescaledb/config.json repository/timescaledb
+          cp -v addon/README.md addon/timescaledb/config.json addon/timescaledb/8.png  repository/timescaledb
           cd repository
           sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.json
+          sed -i "s/imageaftercd/image/g" timescaledb/config.json
           git config --local user.email "hans@expaso.nl"
           git config --local user.name "Hans van Essen"
           git add .
