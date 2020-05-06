@@ -5,7 +5,7 @@
 postgres_data=/data/postgres
 new_install=false
 
-# Init mariadb
+# Init data directory
 if ! bashio::fs.directory_exists "${postgres_data}"; then
     bashio::log.info "Create a new PostgreSQL initial system"
 	# Create postgress directory in data directory
@@ -17,7 +17,7 @@ else
     bashio::log.info "Using existing PostgreSQL installation"
 fi
 
-# Set default secure values after inital setup
+# Initialize for new installs
 if bashio::var.true "${new_install}"; then
     bashio::log.info "Initializing postgres directory"
 	su - postgres -c "initdb -D ${postgres_data}"
@@ -25,22 +25,37 @@ if bashio::var.true "${new_install}"; then
 	sed -r -i "s/[#]*\s*(shared_preload_libraries)\s*=\s*'(.*)'/\1 = 'timescaledb,\2'/;s/,'/'/" ${postgres_data}/postgresql.conf
 fi
 
-# Create run directory for postgressSQL
+# Create run directory for postgres
 mkdir /run/postgresql
 chown -R postgres:postgres /run/postgresql
 
-# Start postgreSQL with timescaledb enabled.
+# Set telemetry level
+echo "timescaledb.telemetry_level=$(bashio::config 'timescaledb.telemetry')" >> ${postgres_data}/postgresql.conf
+
+# Start Postgres
 bashio::log.info "Starting PostgreSQL"
 su - postgres -c "postgres -D ${postgres_data}" &
 postgres_pid=$!
 
 # Wait for postgres to become availale..
 sleep 3
+# while ! mysql -e "" 2> /dev/null; do
+#     sleep 1
+# done
 
-# Install the TimescaleDB extension
-POSTGRES_USER=postgres
-/usr/share/timescaledb/000_install_timescaledb.sh
-/usr/share/timescaledb/001_reenable_auth.sh
+# Create extensions timescaledb in initial databases
+psql -U "postgres" postgres -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
+psql -U "${POSTGRES_USER}" template1 -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
+
+# Create all databases if not exist
+bashio::log.info "Ensure databases exists"
+for database in $(bashio::config "databases"); do
+    bashio::log.info "Create database ${database}"
+	#psql -U "postgres" postgres -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
+    #mysql -e "CREATE DATABASE ${database};" 2> /dev/null || true
+done
+
+# Enable the tiescale-extentions for all indicated databases
 
 # And let it roll
 wait "${postgres_pid}"

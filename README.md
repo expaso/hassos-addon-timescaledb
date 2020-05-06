@@ -65,6 +65,11 @@ Example add-on configuration:
 Sets a list of database-names that will be created for you, once you start the add-on.
 You can also create databases on your own ofcourse, using a psql client of your choice.
 
+### Option: `timescale_enabled`
+
+Sets a list of database-names where the timescale-extentions will be enabled for.
+Databases not in this list will act like normal Postgre databases.
+
 ### Option: `timescaledb.telemetry`
 
 Switches the telemetry of TimescaleDb on or off.

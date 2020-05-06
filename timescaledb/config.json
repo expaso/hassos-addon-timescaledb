@@ -15,26 +15,18 @@
   },
   "options": {
     "databases": ["homeassistant"],
-    "logins": [{ "username": "homeassistant", "password": null, "timescaledb": true }],
-    "rights": [
-      {
-        "username": "homeassistant",
-        "database": "homeassistant"
-      }
-	],
-	"timescaledb": 
-		{ 
+    "timescale_enabled": ["homeassistant"],
+    "timescaledb": { 
       "telemetry": "basic",
       "maxmemory": "512MB",
       "maxcpus": "4"
-		}
+      }
   },
   "schema": {
     "databases": ["str"],
-    "logins": [{ "username": "str", "password": "str", "timescaledb": "bool" }],
-	"rights": [{ "username": "str", "database": "str" }],
-  "timescaledb": 
-    {	"telemetry": "list(off|basic)",
+    "timescale_enabled": ["str"],
+    "timescaledb": {	
+      "telemetry": "list(off|basic)",
       "maxmemory": "str?",
       "maxcpus": "int(1,)?"
     }
