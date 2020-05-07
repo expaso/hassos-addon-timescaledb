@@ -117,7 +117,7 @@ The default is port `5432`
 
 __Securiy Notice!__
 
-The default username is `postgres` with an __empty password__.
+The default username is `postgres` with password `homeassistant`.
 Make sure you change this immediately after activating the add-on:
 
 ```

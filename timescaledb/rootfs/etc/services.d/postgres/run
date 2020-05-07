@@ -51,13 +51,13 @@ postgres_pid=$!
 bashio::log.info "done"
 
 # Wait for postgres to become availale..
-sleep 3
-#while ! psql -U "postgres" postgres -c "SELECT 1;" 2> /dev/null; do
-#	sleep 1
-#done
+while ! psql -U "postgres" postgres -c "" 2> /dev/null; do
+	sleep 1
+done
 
 # Create extensions timescaledb in initial databases
 if bashio::var.true "${new_install}"; then
+	psql -U "postgres" postgres -c "ALTER USER postgres WITH PASSWORD 'homeassistant';"
 	psql -U "postgres" postgres -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 	psql -U "postgres" template1 -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 fi
