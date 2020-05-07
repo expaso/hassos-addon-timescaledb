@@ -1,5 +1,22 @@
-# HomeAssistant Add-On: [TimescaleDB](https://www.timescale.com/)
+# Home Assistant Add-on: [TimescaleDB](https://www.timescale.com/)
 ## [PostgreSql](https://www.postgresql.org/) & [Postgis](https://postgis.net/) & [TimescaleDB](https://www.timescale.com/)
+
+## TimescaleDB Overview
+
+From: https://docs.timescale.com/latest/introduction
+
+TimescaleDB is an open-source time-series database optimized for fast ingest and complex queries. It speaks "full SQL" and is correspondingly easy to use like a traditional relational database, yet scales in ways previously reserved for NoSQL databases.
+
+Compared to the trade-offs demanded by these two alternatives (relational vs. NoSQL), TimescaleDB offers the best of both worlds for time-series data:
+
+### Easy to Use
+Full SQL interface for all SQL natively supported by PostgreSQL (including secondary indexes, non-time based aggregates, sub-queries, JOINs, window functions).
+
+- Connects to any client or tool that speaks PostgreSQL, no changes needed.
+- Time-oriented features, API functions, and optimizations.
+- Robust support for Data retention policies.
+
+
 
 ## Introduction
 
@@ -87,7 +104,7 @@ Or leave empty for accepting auto-tune.
 
 See also:
 https://docs.timescale.com/latest/getting-started/configuring
-for further tuning. Your Postgres.config file it located in the addon's data directory.
+for further tuning. Your Postgres.config file is located in the addon's data directory.
 
 ## Usage
 
@@ -107,7 +124,7 @@ Make sure you change this immediately after activating the add-on:
 ALTER USER user_name WITH PASSWORD 'strongpassword';
 ```
 
-A default `pg_hba.conf` is created in the data directory with the following content, which allows local peer usrs and network users with passwords.:
+A default `pg_hba.conf` is created in the data directory with the following content, which allows local peer users and network users with passwords.:
 
 ```
 # TYPE  DATABASE        USER            ADDRESS                 METHOD

@@ -52,26 +52,26 @@ bashio::log.info "done"
 
 # Wait for postgres to become availale..
 sleep 3
-#while ! mysql -e "" 2> /dev/null; do
-#	psql -U "postgres" postgres -c "SELECT 1;"
+#while ! psql -U "postgres" postgres -c "SELECT 1;" 2> /dev/null; do
+#	sleep 1
 #done
 
 # Create extensions timescaledb in initial databases
-psql -U "postgres" postgres -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
-psql -U "postgres" template1 -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
+if bashio::var.true "${new_install}"; then
+	psql -U "postgres" postgres -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
+	psql -U "postgres" template1 -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
+fi
 
 # Create all databases if not exist
-bashio::log.info "Ensure databases exists.."
 for database in $(bashio::config "databases"); do
-    bashio::log.info "Create database '${database}'"
+    bashio::log.info "Create database if not exist: '${database}'"
 	psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '${database}'" | grep -q 1 || psql -U postgres -c "CREATE DATABASE ${database}"
 done
 bashio::log.info "done"
 
 # Enable the timescale-extentions for all indicated databases
-bashio::log.info "Enabling Timescale Extensions.."
 for database in $(bashio::config "timescale_enabled"); do
-    bashio::log.info "Enabling Timescale Extension for database '${database}'"
+    bashio::log.info "Enabling Timescale Extension for database: '${database}'"
 	psql -U "postgres" ${database} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 done
 bashio::log.info "done"
