@@ -33,6 +33,7 @@ jobs:
       - name: Build image 
         run: |
           sed -i "s/dev/latest/g" timescaledb/config.json
+          sed -i "s/imageaftercd/image/g" timescaledb/config.json
           docker run --rm --privileged \
             -v ~/.docker:/root/.docker \
             -v /var/run/docker.sock:/var/run/docker.sock \
