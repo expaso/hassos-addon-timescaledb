@@ -40,9 +40,14 @@ else
 fi
 bashio::log.info "done"
 
-# Create run directory for postgres
-#mkdir /run/postgresql
-#chown -R postgres:postgres /run/postgresql
+# Apply mem/cpu tuning settings
+bashio::log.info "Tuning resources.."
+TS_TUNE_MEMORY=$(bashio::config 'timescaledb.maxmemory') \
+	TS_TUNE_NUM_CPUS=$(bashio::config 'timescaledb.maxcpus') \
+	POSTGRESQL_CONF_DIR=${postgres_data} \
+	/usr/share/timescaledb/002_timescaledb_tune.sh
+bashio::log.info "done"
+
 
 # Start Postgres
 bashio::log.info "Starting PostgreSQL.."
