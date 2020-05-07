@@ -42,8 +42,11 @@ RUN apk add --no-cache \
 	postgresql-dev
 
 # Create it's run directory
-RUN mkdir /run/postgresql \
-	&& chown -R postgres:postgres /run/postgresql
+RUN mkdir -p /run/postgresql \
+	&& chown -R postgres:postgres /run/postgresql \
+    && mkdir -p /run/postgresql/extensions \
+	&& chown -R postgres:postgres /run/postgresql/extensions
+
 
 # Copy over the tools
 COPY --from=tools /go/bin/* /usr/local/bin/
