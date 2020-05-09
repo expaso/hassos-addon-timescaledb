@@ -108,10 +108,10 @@ RUN set -ex \
         clang \
         clang-dev \
     && apk add --no-cache --virtual \
-		gdal-dev \
 		.build-deps-edge \
-        --repository http://dl-cdn.alpinelinux.org/alpine/edge/community \
-        --repository http://dl-cdn.alpinelinux.org/alpine/edge/main \
+		--repository http://dl-cdn.alpinelinux.org/alpine/latest-stable/main \ 
+		--repository http://dl-cdn.alpinelinux.org/alpine/latest-stable/community \
+		gdal-dev \
         g++ \
         geos-dev \
         proj-dev \
