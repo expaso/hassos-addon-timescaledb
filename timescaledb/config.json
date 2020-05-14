@@ -1,7 +1,7 @@
 {
   "name": "TimescaleDB",
   "version": "dev",
-  "stage": "experimental",
+  "stage": "stable",
   "slug": "timescaledb",
   "description": "An open-source database built on PostgreSQL for analyzing time-series data with the power and convenience of SQL",
   "url": "https://github.com/Expaso/hassos-addon-timescaledb",
