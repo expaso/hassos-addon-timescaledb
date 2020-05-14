@@ -4,7 +4,7 @@ ARG BUILD_FROM
 # Build TimeScaleDB tools binaries in separate image
 ###########################################
 ARG GO_VERSION=1.14.0
-FROM golang:${GO_VERSION}-alpine AS tools
+FROM --platform=${BUILD_ARCH} golang:${GO_VERSION}-alpine AS tools
 
 ENV TOOLS_VERSION 0.8.1
 
