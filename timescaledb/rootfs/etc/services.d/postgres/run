@@ -42,6 +42,7 @@ bashio::log.info "done"
 
 # Apply mem/cpu tuning settings
 bashio::log.info "Tuning resources.."
+chmod 707 "/usr/share/timescaledb/002_timescaledb_tune.sh"
 TS_TUNE_MEMORY=$(bashio::config 'timescaledb.maxmemory') \
 	TS_TUNE_NUM_CPUS=$(bashio::config 'timescaledb.maxcpus') \
 	POSTGRESQL_CONF_DIR=${postgres_data} \
@@ -55,7 +56,7 @@ su - postgres -c "postgres -D ${postgres_data}" &
 postgres_pid=$!
 bashio::log.info "done"
 
-# Wait for postgres to become availale..
+# Wait for postgres to become available..
 while ! psql -U "postgres" postgres -c "" 2> /dev/null; do
 	sleep 1
 done
