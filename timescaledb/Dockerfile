@@ -5,28 +5,26 @@ ARG BUILD_ARCH
 # Build TimeScaleDB tools binaries in separate image
 ###########################################
 ARG GO_VERSION=1.14.0
-FROM --platform=${BUILD_ARCH} golang:${GO_VERSION}-alpine AS tools
+FROM golang:${GO_VERSION}-alpine AS tools
 
 ENV TOOLS_VERSION 0.8.1
 
-RUN apk update && apk add --no-cache git
-
-RUN mkdir -p /go/src/github.com/timescale/ \
-    && cd /go/src/github.com/timescale/
-
-RUN git clone https://github.com/timescale/timescaledb-tune.git \
-    && git clone https://github.com/timescale/timescaledb-parallel-copy.git
-
-RUN cd timescaledb-tune/cmd/timescaledb-tune \
+RUN apk update && apk add --no-cache git \
+    && mkdir -p ${GOPATH}/src/github.com/timescale/ \
+    && cd ${GOPATH}/src/github.com/timescale/ \
+    && git clone https://github.com/timescale/timescaledb-tune.git \
+    && git clone https://github.com/timescale/timescaledb-parallel-copy.git \
+    # Build timescaledb-tune
+    && cd timescaledb-tune/cmd/timescaledb-tune \
     && git fetch && git checkout --quiet $(git describe --abbrev=0) \
-    && go get -d -v 
-
-RUN go build -o /go/bin/timescaledb-tune
+    && go get -d -v \
+    && go build -o /go/bin/timescaledb-tune \
     # Build timescaledb-parallel-copy
-RUN cd /go/src/github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy
-RUN git fetch && git checkout --quiet $(git describe --abbrev=0)
-RUN go get -d -v \
+    && cd ${GOPATH}/src/github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy \
+    && git fetch && git checkout --quiet $(git describe --abbrev=0) \
+    && go get -d -v \
     && go build -o /go/bin/timescaledb-parallel-copy
+
 
 ####################################
 # Now build image and copy in tools

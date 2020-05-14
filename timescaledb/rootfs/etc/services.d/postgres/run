@@ -42,11 +42,11 @@ bashio::log.info "done"
 
 # Apply mem/cpu tuning settings
 bashio::log.info "Tuning resources.."
-chmod 707 "/usr/share/timescaledb/002_timescaledb_tune.sh"
-TS_TUNE_MEMORY=$(bashio::config 'timescaledb.maxmemory') \
-	TS_TUNE_NUM_CPUS=$(bashio::config 'timescaledb.maxcpus') \
-	POSTGRESQL_CONF_DIR=${postgres_data} \
-	/usr/share/timescaledb/002_timescaledb_tune.sh
+# chmod 707 "/usr/share/timescaledb/002_timescaledb_tune.sh"
+# TS_TUNE_MEMORY=$(bashio::config 'timescaledb.maxmemory') \
+# 	TS_TUNE_NUM_CPUS=$(bashio::config 'timescaledb.maxcpus') \
+# 	POSTGRESQL_CONF_DIR=${postgres_data} \
+# 	/usr/share/timescaledb/002_timescaledb_tune.sh
 bashio::log.info "done"
 
 
