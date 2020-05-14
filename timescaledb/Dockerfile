@@ -9,8 +9,9 @@ FROM --platform=${BUILD_ARCH} golang:${GO_VERSION}-alpine AS tools
 
 ENV TOOLS_VERSION 0.8.1
 
-RUN apk update && apk add --no-cache git \
-    && mkdir -p /go/src/github.com/timescale/ \
+RUN apk update && apk add --no-cache git
+
+RUN mkdir -p /go/src/github.com/timescale/ \
     && cd /go/src/github.com/timescale/
 
 RUN git clone https://github.com/timescale/timescaledb-tune.git \
