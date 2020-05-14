@@ -1,4 +1,5 @@
 ARG BUILD_FROM
+ARG BUILD_ARCH
 
 ###########################################
 # Build TimeScaleDB tools binaries in separate image
