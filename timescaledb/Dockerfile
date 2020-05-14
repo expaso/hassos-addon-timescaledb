@@ -11,8 +11,9 @@ ENV TOOLS_VERSION 0.8.1
 
 RUN apk update && apk add --no-cache git \
     && mkdir -p ${GOPATH}/src/github.com/timescale/ \
-    && cd ${GOPATH}/src/github.com/timescale/ \
-    && git clone https://github.com/timescale/timescaledb-tune.git \
+    && cd ${GOPATH}/src/github.com/timescale/
+	
+RUN git clone https://github.com/timescale/timescaledb-tune.git \
     && git clone https://github.com/timescale/timescaledb-parallel-copy.git \
     # Build timescaledb-tune
     && cd timescaledb-tune/cmd/timescaledb-tune \
