@@ -15,19 +15,18 @@ RUN mkdir -p /go/src/github.com/timescale/ \
     && cd /go/src/github.com/timescale/
 
 RUN git clone https://github.com/timescale/timescaledb-tune.git \
-    && git clone https://github.com/timescale/timescaledb-parallel-copy.git \
-    # Build timescaledb-tune
-    && cd timescaledb-tune/cmd/timescaledb-tune \
+    && git clone https://github.com/timescale/timescaledb-parallel-copy.git
+
+RUN cd timescaledb-tune/cmd/timescaledb-tune \
     && git fetch && git checkout --quiet $(git describe --abbrev=0) \
     && go get -d -v 
 
-RUN go build -o /go/bin/timescaledb-tune \
+RUN go build -o /go/bin/timescaledb-tune
     # Build timescaledb-parallel-copy
-    && cd /go/src/github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy \
-    && git fetch && git checkout --quiet $(git describe --abbrev=0) \
-    && go get -d -v \
+RUN cd /go/src/github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy
+RUN git fetch && git checkout --quiet $(git describe --abbrev=0)
+RUN go get -d -v \
     && go build -o /go/bin/timescaledb-parallel-copy
-
 
 ####################################
 # Now build image and copy in tools

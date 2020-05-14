@@ -34,5 +34,6 @@
       "maxcpus": "int(1,)?"
     }
   },
-  "imageaftercd": "husselhans/hassos-addon-timescaledb-{arch}"
+  "imageaftercd": "husselhans/hassos-addon-timescaledb-{arch}",
+  "xximage": "husselhans/hassos-addon-timescaledb-{arch}"
 }
