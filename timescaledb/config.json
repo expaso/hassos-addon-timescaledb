@@ -1,6 +1,6 @@
 {
   "name": "TimescaleDB",
-  "version": "latest",
+  "version": "dev",
   "stage": "stable",
   "slug": "timescaledb",
   "description": "An open-source database built on PostgreSQL for analyzing time-series data with the power and convenience of SQL",
@@ -34,6 +34,5 @@
       "maxcpus": "int(1,)?"
     }
   },
-  "imageaftercd": "husselhans/hassos-addon-timescaledb-{arch}",
-  "xximage": "husselhans/hassos-addon-timescaledb-{arch}"
+  "imageaftercd": "husselhans/hassos-addon-timescaledb-{arch}"
 }
