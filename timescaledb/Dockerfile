@@ -8,7 +8,7 @@ ARG GO_VERSION=1.14.0
 FROM golang:${GO_VERSION}-alpine AS tools
 
 ENV TOOLS_VERSION 0.8.1
-ENV BUILD_ARCH $BUILD_ARCH
+ENV REAL_ARCH=$BUILD_ARCH
 
 RUN apk update && apk add --no-cache git \
     && mkdir -p ${GOPATH}/src/github.com/timescale/ \
@@ -16,17 +16,17 @@ RUN apk update && apk add --no-cache git \
     && git clone https://github.com/timescale/timescaledb-tune.git \
     && git clone https://github.com/timescale/timescaledb-parallel-copy.git \
 	# Fixup build arch to be compatible with GO cross compile
-	&& if [ "${BUILD_ARCH}" == "aarch64" ]; then export BUILD_ARCH="arm64"; fi \
+	&& if [ "${REAL_ARCH}" == "aarch64" ]; then export REAL_ARCH="arm64"; fi \
     # Build timescaledb-tune
     && cd timescaledb-tune/cmd/timescaledb-tune \
     && git fetch && git checkout --quiet $(git describe --abbrev=0) \
     && go get -d -v \
-    && GOOS="linux" GOARCH="${BUILD_ARCH}" go build -o /go/bin/timescaledb-tune \
+    && GOOS="linux" GOARCH="${REAL_ARCH}" go build -o /go/bin/timescaledb-tune \
     # Build timescaledb-parallel-copy
     && cd ${GOPATH}/src/github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy \
     && git fetch && git checkout --quiet $(git describe --abbrev=0) \
     && go get -d -v \
-    && GOOS="linux" GOARCH="${BUILD_ARCH}" go build -o /go/bin/timescaledb-parallel-copy
+    && GOOS="linux" GOARCH="${REAL_ARCH}" go build -o /go/bin/timescaledb-parallel-copy
 
 
 ####################################
