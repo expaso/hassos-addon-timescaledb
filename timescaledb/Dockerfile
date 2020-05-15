@@ -16,12 +16,12 @@ RUN apk update && apk add --no-cache git \
     && git clone https://github.com/timescale/timescaledb-tune.git \
     && git clone https://github.com/timescale/timescaledb-parallel-copy.git \
 	# Fixup build arch to be compatible with GO cross compile
-	&& if [ "${BUILD_ARCH}" == "aarch64" ]; then BUILD_ARCH="arm64"; fi \
+	&& if [ "${BUILD_ARCH}" == "aarch64" ]; then export BUILD_ARCH="arm64"; fi \
     # Build timescaledb-tune
     && cd timescaledb-tune/cmd/timescaledb-tune \
     && git fetch && git checkout --quiet $(git describe --abbrev=0) \
     && go get -d -v \
-    && GOOS="linux" GOARCH="arm64" go build -o /go/bin/timescaledb-tune \
+    && GOOS="linux" GOARCH="${BUILD_ARCH}" go build -o /go/bin/timescaledb-tune \
     # Build timescaledb-parallel-copy
     && cd ${GOPATH}/src/github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy \
     && git fetch && git checkout --quiet $(git describe --abbrev=0) \
