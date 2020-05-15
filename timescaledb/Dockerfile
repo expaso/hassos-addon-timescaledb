@@ -21,12 +21,12 @@ RUN apk update && apk add --no-cache git \
     && cd timescaledb-tune/cmd/timescaledb-tune \
     && git fetch && git checkout --quiet $(git describe --abbrev=0) \
     && go get -d -v \
-    && GOOS="linux" GOARCH="${BUILD_ARCH}}" go build -o /go/bin/timescaledb-tune \
+    && GOOS="linux" GOARCH="${BUILD_ARCH}" go build -o /go/bin/timescaledb-tune \
     # Build timescaledb-parallel-copy
     && cd ${GOPATH}/src/github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy \
     && git fetch && git checkout --quiet $(git describe --abbrev=0) \
     && go get -d -v \
-    && GOOS="linux" GOARCH="${BUILD_ARCH}}" go build -o /go/bin/timescaledb-parallel-copy
+    && GOOS="linux" GOARCH="${BUILD_ARCH}" go build -o /go/bin/timescaledb-parallel-copy
 
 
 ####################################
