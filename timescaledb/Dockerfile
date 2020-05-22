@@ -144,6 +144,9 @@ RUN set -ex \
     && rm -rf /tmp/postgis-${POSTGIS_VERSION} \
     && apk del .fetch-deps .build-deps .build-deps-edge
 
+RUN set -ex \
+    && apk add postgis
+
 # --------------------------------------
 # Finish image
 # --------------------------------------
