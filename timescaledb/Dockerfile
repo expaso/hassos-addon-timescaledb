@@ -101,6 +101,7 @@ RUN set -ex \
                 gcc \
                 make \
                 cmake \
+				build-base \
 				boost-dev \
 				openldap-dev \
     && cd /build/pgagent \
