@@ -112,11 +112,16 @@ RUN set -ex \
     && apk del .fetch-deps .build-deps \
     && rm -rf /build 
 
+RUN set -ex \
+	apk add --no-cache \
+	boost
+
 # --------------------------------------
 # Add Postgis
 # --------------------------------------
 RUN set -ex \
-    && apk add postgis
+    && apk add --no-cache \
+	postgis
 
 # --------------------------------------
 # Finish image

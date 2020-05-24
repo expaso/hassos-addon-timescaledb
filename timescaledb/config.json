@@ -9,6 +9,7 @@
   "startup": "system",
   "boot": "auto",
   "init": false,
+  "map": ["share:rw"],  
   "timeout": 20,
   "ports": {
     "5432/tcp": null
