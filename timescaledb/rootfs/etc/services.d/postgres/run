@@ -80,7 +80,7 @@ for database in $(bashio::config "timescale_enabled"); do
     bashio::log.info "Enabling Timescale Extension for database: '${database}'"
 	psql -U "postgres" ${database} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 	# Update timescale extention, as per: https://docs.timescale.com/latest/using-timescaledb/update-db
-	psql -U "postgres" ${database} -X -c "ALTER EXTENSION timescaledb UPDATE;"
+	psql -U "postgres" ${database} -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
 done
 bashio::log.info "done"
 
