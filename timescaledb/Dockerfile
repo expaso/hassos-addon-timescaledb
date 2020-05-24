@@ -17,7 +17,6 @@ RUN apk update && apk add --no-cache git \
 	# Fixup build arch to be compatible with GO cross compile
 	&& REAL_ARCH="$BUILD_ARCH" \
 	&& if [[ ${REAL_ARCH} == "aarch64" ]]; then export REAL_ARCH="arm64"; fi \
-	#&& export REAL_ARCH="${BUILD_ARCH}" \
     # Build timescaledb-tune
     && cd timescaledb-tune/cmd/timescaledb-tune \
     && git fetch && git checkout --quiet $(git describe --abbrev=0) \
@@ -36,15 +35,14 @@ RUN apk update && apk add --no-cache git \
 FROM $BUILD_FROM
 
 # Fix versions
-ENV TIMESCALEDB_VERSION 1.7.0
-ENV POSTGIS_VERSION 2.5.3
-# Enable this if you only wanr
+ENV TIMESCALEDB_VERSION 1.7.1
+# Enable this if you only want the OSS parts
 #ENV OSS_ONLY -DAPACHE_ONLY=1
 
 # Add normal postgresql alpine package
 RUN apk add --no-cache \
     postgresql \
-	postgresql-dev
+    postgresql-dev
 
 # Create it's run directory
 RUN mkdir -p /run/postgresql \
@@ -86,64 +84,8 @@ RUN set -ex \
     && rm -rf /build 
 
 # --------------------------------------
-# Build Postgis
+# Add Postgis
 # --------------------------------------
-RUN set -ex \
-    && apk add --no-cache --virtual .fetch-deps \
-                ca-certificates \
-                openssl \
-                tar \
-    # add libcrypto from (edge:main) for gdal-2.3.0
-    #&& apk add --no-cache --virtual .crypto-rundeps \
-    #            --repository http://dl-cdn.alpinelinux.org/alpine/edge/main \
-    #            libressl2.7-libcrypto \
-    #            libcrypto1.1 \
-    #            poppler \
-    #            llvm9-dev \
-    && apk add --no-cache --virtual .build-deps \
-        autoconf \
-        automake \
-        file \
-        json-c-dev \
-        libtool \
-        libxml2-dev \
-        make \
-        perl \
-        llvm \
-        clang \
-        clang-dev \
-    && apk add --no-cache --virtual .build-deps-edge \
-        --repository http://dl-cdn.alpinelinux.org/alpine/edge/community \
-        --repository http://dl-cdn.alpinelinux.org/alpine/edge/main \
-        g++ \
-        gdal-dev \
-        geos-dev \
-        proj-dev \
-        protobuf-c-dev \
-    && cd /tmp \
-    && wget https://github.com/postgis/postgis/archive/${POSTGIS_VERSION}.tar.gz -O - | tar -xz \
-    && chown root:root -R postgis-${POSTGIS_VERSION} \
-    && cd /tmp/postgis-${POSTGIS_VERSION} \
-    && ./autogen.sh \
-    && ./configure \
-    && echo "PERL = /usr/bin/perl" >> extensions/postgis/Makefile \
-    && echo "PERL = /usr/bin/perl" >> extensions/postgis_topology/Makefile \
-    && make -s \
-    && make -s install \
-    && apk add --no-cache --virtual .postgis-rundeps \
-        json-c \
-    && apk add --no-cache --virtual .postgis-rundeps-edge \
-        --repository http://dl-cdn.alpinelinux.org/alpine/edge/community \
-        --repository http://dl-cdn.alpinelinux.org/alpine/edge/main \
-        geos \
-        gdal \
-        proj \
-        protobuf-c \
-        libstdc++ \
-    && cd / \
-    && rm -rf /tmp/postgis-${POSTGIS_VERSION} \
-    && apk del .fetch-deps .build-deps .build-deps-edge
-
 RUN set -ex \
     && apk add postgis
 
