@@ -114,7 +114,7 @@ RUN set -ex \
 
 RUN set -ex \
 	apk add --no-cache \
-	boost
+	boost-libs
 
 # --------------------------------------
 # Add Postgis
