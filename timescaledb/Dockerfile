@@ -84,6 +84,34 @@ RUN set -ex \
     && rm -rf /build 
 
 # --------------------------------------
+# Build pgAgent
+# --------------------------------------
+ENV PGAGENT_VERSION REL-4_0_0
+RUN set -ex \
+    && apk add --no-cache --virtual .fetch-deps \
+                ca-certificates \
+                git \
+                openssl \
+                openssl-dev \
+                tar \
+    && mkdir -p /build/ \
+    && git clone https://github.com/postgres/pgagent /build/pgagent \
+    && apk add --no-cache --virtual .build-deps \
+                coreutils \
+                gcc \
+                make \
+                cmake \
+				boost-dev \
+				openldap-dev \
+    && cd /build/pgagent \
+    && git checkout ${PGAGENT_VERSION} \
+    && cmake . \
+    && make && make install \
+    && cd ~ \
+    && apk del .fetch-deps .build-deps \
+    && rm -rf /build 
+
+# --------------------------------------
 # Add Postgis
 # --------------------------------------
 RUN set -ex \
