@@ -110,11 +110,9 @@ RUN set -ex \
     && make && make install \
     && cd ~ \
     && apk del .fetch-deps .build-deps \
-    && rm -rf /build 
-
-RUN set -ex \
-	apk add --no-cache \
-	boost-dev
+    && rm -rf /build \
+	&& apk add --no-cache \
+				boost-libs
 
 # --------------------------------------
 # Add Postgis
