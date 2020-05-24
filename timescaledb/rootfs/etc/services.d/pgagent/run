@@ -11,11 +11,11 @@ done
 bashio::log.info "Starting PgAgent.."
 
 # Add pgagent-sql to postgres database
-psql -U "postgres" -d "postgres" -a -f /usr/local/share/pgagent.sql || true > /var/log/pgagent.run.log
+#psql -U "postgres" -d "postgres" -a -f /usr/local/share/pgagent.sql || true &> /var/log/pgagent.run.log
 
 bashio::log.info "Enabling Extension PgAgent.."
 
-psql -U "postgres" -d "postgres" -c "CREATE EXTENSION IF NOT EXISTS pgagent;" >> /var/log/pgagent.run.log
+psql -U "postgres" -d "postgres" -c "CREATE EXTENSION IF NOT EXISTS pgagent;" 
 psql -U "postgres" -d "postgres" -X -c "ALTER EXTENSION pgagent UPDATE;" || true >> /var/log/pgagent.run.log
 
 # And run the daemon in the foreground
