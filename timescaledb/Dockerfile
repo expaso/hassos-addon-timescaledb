@@ -116,6 +116,38 @@ RUN set -ex \
     && apk del .fetch-deps .build-deps \
     && rm -rf /build 
 
+# --------------------------------------
+# Build TimescaleDB 1.7.2
+# --------------------------------------
+# Fix versions
+ENV TIMESCALEDB_VERSION 1.7.2
+# Enable this if you only want the OSS parts
+#ENV OSS_ONLY -DAPACHE_ONLY=1
+RUN set -ex \
+    && apk add --no-cache --virtual .fetch-deps \
+                ca-certificates \
+                git \
+                openssl \
+                openssl-dev \
+                tar \
+    && mkdir -p /build/ \
+    && git clone https://github.com/timescale/timescaledb /build/timescaledb\
+    && apk add --no-cache --virtual .build-deps \
+                coreutils \
+                dpkg-dev dpkg \
+                gcc \
+                libc-dev \
+                make \
+                cmake \
+                util-linux-dev\
+    && cd /build/timescaledb && rm -fr build \
+    && git checkout ${TIMESCALEDB_VERSION} \
+    && ./bootstrap -DREGRESS_CHECKS=OFF -DPROJECT_INSTALL_METHOD="docker"${OSS_ONLY} \
+    && cd build && make install \
+    && cd ~ \
+    && if [ "${OSS_ONLY}" != "" ]; then rm -f $(pg_config --pkglibdir)/timescaledb-tsl-*.so; fi \
+    && apk del .fetch-deps .build-deps \
+    && rm -rf /build 
 
 # --------------------------------------
 # Build pgAgent

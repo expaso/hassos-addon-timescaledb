@@ -1,5 +1,5 @@
 # Home Assistant Add-on: [TimescaleDB](https://www.timescale.com/)
-## [PostgreSql 12.3](https://www.postgresql.org/) & [Postgis 3.0.1](https://postgis.net/) & [TimescaleDB 1.7.1](https://www.timescale.com/)
+## [PostgreSql 12.3](https://www.postgresql.org/) & [Postgis 3.0.1](https://postgis.net/) & [TimescaleDB 1.7.2](https://www.timescale.com/)
 
 ## TimescaleDB Overview
 
@@ -15,8 +15,6 @@ Full SQL interface for all SQL natively supported by PostgreSQL (including secon
 - Connects to any client or tool that speaks PostgreSQL, no changes needed.
 - Time-oriented features, API functions, and optimizations.
 - Robust support for Data retention policies.
-
-
 
 ## Introduction
 
