@@ -11,11 +11,12 @@ if ! bashio::fs.directory_exists "${postgres_data}"; then
 	# Create postgress directory in data directory
     new_install=true
 	mkdir -p ${postgres_data}
-	chown -R postgres:postgres ${postgres_data}
-	chmod 700 ${postgres_data}
 else
     bashio::log.info "Using existing PostgreSQL installation.."
 fi
+# Always re-apply permissions, because they seem to be reset after a snapshot restore
+chown -R postgres:postgres ${postgres_data}
+chmod 700 ${postgres_data}
 
 # Initialize for new installs
 if bashio::var.true "${new_install}"; then
