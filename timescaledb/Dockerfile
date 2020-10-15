@@ -34,12 +34,13 @@ RUN apk update && apk add --no-cache git \
 ####################################
 FROM $BUILD_FROM
 
-
-# Add normal postgresql alpine package
-# 12.4-r1
+# --------------------------------------
+# Add PostgreSql 12.4
+# --------------------------------------
+ENV POSTGRES_VERSION=12.4-r1
 RUN apk add --no-cache \
-    postgresql \
-    postgresql-dev
+    postgresql>${POSTGRES_VERSION} \
+    postgresql-dev>${POSTGRES_VERSION}
 
 # Create it's run directory
 RUN mkdir -p /run/postgresql \
@@ -47,108 +48,8 @@ RUN mkdir -p /run/postgresql \
     && mkdir -p /run/postgresql/extensions \
 	&& chown -R postgres:postgres /run/postgresql/extensions
 
-
 # Copy over the tools
 COPY --from=tools /go/bin/* /usr/local/bin/
-
-# --------------------------------------
-# Build TimescaleDB 1.7.0
-# --------------------------------------
-# Fix versions
-ENV TIMESCALEDB_VERSION 1.7.0
-# Enable this if you only want the OSS parts
-#ENV OSS_ONLY -DAPACHE_ONLY=1
-RUN set -ex \
-    && apk add --no-cache --virtual .fetch-deps \
-                ca-certificates \
-                git \
-                openssl \
-                openssl-dev \
-                tar \
-    && mkdir -p /build/ \
-    && git clone https://github.com/timescale/timescaledb /build/timescaledb\
-    && apk add --no-cache --virtual .build-deps \
-                coreutils \
-                dpkg-dev dpkg \
-                gcc \
-                libc-dev \
-                make \
-                cmake \
-                util-linux-dev\
-    && cd /build/timescaledb && rm -fr build \
-    && git checkout ${TIMESCALEDB_VERSION} \
-    && ./bootstrap -DREGRESS_CHECKS=OFF -DPROJECT_INSTALL_METHOD="docker"${OSS_ONLY} \
-    && cd build && make install \
-    && cd ~ \
-    && if [ "${OSS_ONLY}" != "" ]; then rm -f $(pg_config --pkglibdir)/timescaledb-tsl-*.so; fi \
-    && apk del .fetch-deps .build-deps \
-    && rm -rf /build 
-
-# --------------------------------------
-# Build TimescaleDB 1.7.1
-# --------------------------------------
-# Fix versions
-ENV TIMESCALEDB_VERSION 1.7.1
-# Enable this if you only want the OSS parts
-#ENV OSS_ONLY -DAPACHE_ONLY=1
-RUN set -ex \
-    && apk add --no-cache --virtual .fetch-deps \
-                ca-certificates \
-                git \
-                openssl \
-                openssl-dev \
-                tar \
-    && mkdir -p /build/ \
-    && git clone https://github.com/timescale/timescaledb /build/timescaledb\
-    && apk add --no-cache --virtual .build-deps \
-                coreutils \
-                dpkg-dev dpkg \
-                gcc \
-                libc-dev \
-                make \
-                cmake \
-                util-linux-dev\
-    && cd /build/timescaledb && rm -fr build \
-    && git checkout ${TIMESCALEDB_VERSION} \
-    && ./bootstrap -DREGRESS_CHECKS=OFF -DPROJECT_INSTALL_METHOD="docker"${OSS_ONLY} \
-    && cd build && make install \
-    && cd ~ \
-    && if [ "${OSS_ONLY}" != "" ]; then rm -f $(pg_config --pkglibdir)/timescaledb-tsl-*.so; fi \
-    && apk del .fetch-deps .build-deps \
-    && rm -rf /build 
-
-# --------------------------------------
-# Build TimescaleDB 1.7.2
-# --------------------------------------
-# Fix versions
-ENV TIMESCALEDB_VERSION 1.7.2
-# Enable this if you only want the OSS parts
-#ENV OSS_ONLY -DAPACHE_ONLY=1
-RUN set -ex \
-    && apk add --no-cache --virtual .fetch-deps \
-                ca-certificates \
-                git \
-                openssl \
-                openssl-dev \
-                tar \
-    && mkdir -p /build/ \
-    && git clone https://github.com/timescale/timescaledb /build/timescaledb\
-    && apk add --no-cache --virtual .build-deps \
-                coreutils \
-                dpkg-dev dpkg \
-                gcc \
-                libc-dev \
-                make \
-                cmake \
-                util-linux-dev\
-    && cd /build/timescaledb && rm -fr build \
-    && git checkout ${TIMESCALEDB_VERSION} \
-    && ./bootstrap -DREGRESS_CHECKS=OFF -DPROJECT_INSTALL_METHOD="docker"${OSS_ONLY} \
-    && cd build && make install \
-    && cd ~ \
-    && if [ "${OSS_ONLY}" != "" ]; then rm -f $(pg_config --pkglibdir)/timescaledb-tsl-*.so; fi \
-    && apk del .fetch-deps .build-deps \
-    && rm -rf /build 
 
 # --------------------------------------
 # Build TimescaleDB 1.7.4

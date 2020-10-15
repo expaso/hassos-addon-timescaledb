@@ -67,6 +67,10 @@ if bashio::var.true "${new_install}"; then
 	psql -U "postgres" postgres -c "ALTER USER postgres WITH PASSWORD 'homeassistant';"
 	psql -U "postgres" postgres -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 	psql -U "postgres" template1 -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
+else
+	#Always try to update extensions for these initial databases databases
+	psql -U "postgres" postgres -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
+	psql -U "postgres" template1 -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
 fi
 
 # Create all databases if not exist
@@ -79,8 +83,8 @@ bashio::log.info "done"
 # Enable the timescale-extentions for all indicated databases
 for database in $(bashio::config "timescale_enabled"); do
     bashio::log.info "Enabling Timescale Extension for database: '${database}'"
-	psql -U "postgres" ${database} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 	# Update timescale extention, as per: https://docs.timescale.com/latest/using-timescaledb/update-db
+	psql -U "postgres" ${database} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 	psql -U "postgres" ${database} -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
 done
 bashio::log.info "done"
