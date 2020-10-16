@@ -18,8 +18,15 @@ while ! psql -U "postgres" postgres -c "" 2> /dev/null; do
 	sleep 1
 done
 
+
 # Check if we need to update..
 if bashio::var.true "${update}"; then
+	bashio::log.info "Waiting for update to complete.."
+	while [[ $(< ${version_file}) != $(bashio::addon.version) ]]; do
+		sleep 1
+		bashio::log.info "."
+	done
+
 	bashio::log.info "Updating PgAgent Extension.."
 	psql -U "postgres" -d "postgres" -X -c "ALTER EXTENSION pgagent UPDATE;" || true >> /var/log/pgagent.run.log
 	exit 0;

@@ -13,7 +13,7 @@ update=false
 
 # Check if we need to update
 if [[ $(< ${version_file}) != $(bashio::addon.version) ]]; then
-	bashio::log.notice "Addon was updated to version: $(bashio::addon.version). Performing container upgrade..."
+	bashio::log.notice "Addon was updated to version: $(bashio::addon.version). Performing database upgrade..."
 	update=true
 fi
 
@@ -29,13 +29,12 @@ while ! psql -U "postgres" postgres -c "" 2> /dev/null; do
 done
 
 # Create extensions timescaledb in initial databases
-if [[ ! -f "/data/initialized" ]]; then
+if [[ -f "/data/firstrun" ]]; then
 	bashio::log.info "Setting up postgres user.."
 	psql -U "postgres" postgres -c "ALTER USER postgres WITH PASSWORD 'homeassistant';"
 	bashio::log.info "Enabling Timescale Extension for default databases.."
 	psql -U "postgres" postgres -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 	psql -U "postgres" template1 -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
-	touch /data/initialized
 fi
 
 # Update timescale when needed
@@ -66,12 +65,11 @@ done
 bashio::log.info "done"
 
 # Exit update mode
+rm -f /data/firstrun
 if bashio::var.true "${update}"; then
 	bashio::log.info "Exiting update mode and restarting pgAgent."
 	# Write new addon-version
 	bashio::addon.version > ${version_file}
-	# And restart S6 pgAgent service
-	s6-svc -r /var/run/s6/services/pgagent
 fi
 
 # And let it roll

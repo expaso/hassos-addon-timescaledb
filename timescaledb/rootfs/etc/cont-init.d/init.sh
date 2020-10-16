@@ -30,6 +30,7 @@ chmod 700 ${postgres_data}
 # Initialize for new installs
 if bashio::var.true "${new_install}"; then
     bashio::log.info "Initializing postgres directory.."
+	touch /data/firstrun
 
 	# Init data-directory
 	su - postgres -c "initdb -D ${postgres_data}"
@@ -43,7 +44,6 @@ if bashio::var.true "${new_install}"; then
 	sed -r -i "s/[#]listen_addresses.=.'.*'/listen_addresses\ \=\ \'\*\'/g" ${postgres_data}/postgresql.conf
 	# Set telemetry level
 	echo "timescaledb.telemetry_level=$(bashio::config 'timescaledb.telemetry')" >> ${postgres_data}/postgresql.conf
-
 else
 	# Set telemetry level
 	sed -r -i "s/timescaledb.telemetry_level.=.'.*'/timescaledb.telemetry_level=$(bashio::config 'timescaledb.telemetry')/g" ${postgres_data}/postgresql.conf
