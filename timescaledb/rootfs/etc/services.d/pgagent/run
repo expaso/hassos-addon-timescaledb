@@ -3,15 +3,27 @@
 # Start PgAgent service if enabled
 # ==============================================================================
 
+
+# Check for updates
+update=false
+if [[ $(< /data/version) != $(bashio::addon.version) ]]; then
+	update=true
+fi
+
 # Wait for postgres to become available..
 while ! psql -U "postgres" postgres -c "" 2> /dev/null; do
 	sleep 1
 done
 
-
-bashio::log.info "Enabling PgAgent Extension.."
-psql -U "postgres" -d "postgres" -c "CREATE EXTENSION IF NOT EXISTS pgagent;" || true >> /var/log/pgagent.run.log
-psql -U "postgres" -d "postgres" -X -c "ALTER EXTENSION pgagent UPDATE;" || true >> /var/log/pgagent.run.log
+# Check if we need to update..
+if bashio::var.true "${update}"; then
+	bashio::log.info "Updating PgAgent Extension.."
+	psql -U "postgres" -d "postgres" -X -c "ALTER EXTENSION pgagent UPDATE;" || true >> /var/log/pgagent.run.log
+	exit 1;
+else
+	bashio::log.info "Enabling PgAgent Extension.."
+	psql -U "postgres" -d "postgres" -c "CREATE EXTENSION IF NOT EXISTS pgagent;" || true >> /var/log/pgagent.run.log
+fi
 
 # And run the daemon in the foreground
 bashio::log.info "Starting PgAgent.."

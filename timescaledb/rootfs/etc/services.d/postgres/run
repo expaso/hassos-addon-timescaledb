@@ -4,6 +4,7 @@
 # ==============================================================================
 postgres_data=/data/postgres
 new_install=false
+update=false
 
 # Init data directory
 if ! bashio::fs.directory_exists "${postgres_data}"; then
@@ -11,9 +12,16 @@ if ! bashio::fs.directory_exists "${postgres_data}"; then
 	# Create postgress directory in data directory
     new_install=true
 	mkdir -p ${postgres_data}
+	bashio::addon.version > /data/version
 else
     bashio::log.info "Using existing PostgreSQL installation.."
+	# Check if we need to update
+	if [[ $(< /data/version) != $(bashio::addon.version) ]]; then
+		bashio::log.notice "Addon was updated to version: ${bashio::addon.version}"
+		update=true
+	fi
 fi
+
 # Always re-apply permissions, because they seem to be reset after a snapshot restore
 chown -R postgres:postgres ${postgres_data}
 chmod 700 ${postgres_data}
@@ -50,7 +58,6 @@ TS_TUNE_MEMORY=$(bashio::config 'timescaledb.maxmemory') \
 	/usr/share/timescaledb/002_timescaledb_tune.sh
 bashio::log.info "done"
 
-
 # Start Postgres
 bashio::log.info "Starting PostgreSQL.."
 su - postgres -c "postgres -D ${postgres_data}" &
@@ -67,8 +74,11 @@ if bashio::var.true "${new_install}"; then
 	psql -U "postgres" postgres -c "ALTER USER postgres WITH PASSWORD 'homeassistant';"
 	psql -U "postgres" postgres -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 	psql -U "postgres" template1 -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
-else
-	#Always try to update extensions for these initial databases databases
+fi
+
+# Update timescale when needed
+if bashio::var.true "${update}"; then
+    bashio::log.info "Updating system databases.."
 	psql -U "postgres" postgres -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
 	psql -U "postgres" template1 -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
 fi
@@ -82,12 +92,25 @@ bashio::log.info "done"
 
 # Enable the timescale-extentions for all indicated databases
 for database in $(bashio::config "timescale_enabled"); do
-    bashio::log.info "Enabling Timescale Extension for database: '${database}'"
-	# Update timescale extention, as per: https://docs.timescale.com/latest/using-timescaledb/update-db
-	psql -U "postgres" ${database} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
-	psql -U "postgres" ${database} -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
+	if bashio::var.true "${update}"; then
+		# Update timescale extention, as per: https://docs.timescale.com/latest/using-timescaledb/update-db
+		bashio::log.info "Updating Timescale Extension for database: '${database}'"
+		psql -U "postgres" ${database} -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
+	else
+		bashio::log.info "Enabling Timescale Extension for database: '${database}'"
+		psql -U "postgres" ${database} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
+	fi
 done
 bashio::log.info "done"
+
+# Exit update mode
+if bashio::var.true "${update}"; then
+	bashio::log.info "Exiting update mode and restarting pgAgent."
+	# Write new addon-version
+	bashio::addon.version > /data/version
+	# And restart S6 pgAgent service
+	s6-svc -r /var/run/s6/services/pgagent
+fi
 
 # And let it roll
 bashio::log.notice "TimescaleDb is running!"
