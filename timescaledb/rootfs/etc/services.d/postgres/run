@@ -13,7 +13,7 @@ update=false
 
 # Check if we need to update
 if [[ $(< ${version_file}) != $(bashio::addon.version) ]]; then
-	bashio::log.notice "Addon was updated to version: ${bashio::addon.version}"
+	bashio::log.notice "Addon was updated to version: $(bashio::addon.version). Performing container upgrade..."
 	update=true
 fi
 
