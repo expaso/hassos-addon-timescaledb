@@ -67,9 +67,11 @@ bashio::log.info "done"
 # Exit update mode
 rm -f /data/firstrun
 if bashio::var.true "${update}"; then
-	bashio::log.info "Exiting update mode and restarting pgAgent."
+	bashio::log.info "Exiting update mode and restarting.."
 	# Write new addon-version
 	bashio::addon.version > ${version_file}
+	sleep 3
+	bashio::addon.restart
 fi
 
 # And let it roll
