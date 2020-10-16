@@ -24,7 +24,9 @@
       "telemetry": "basic",
       "maxmemory": "512MB",
       "maxcpus": "4"
-      }
+    },
+    "system_packages": [],
+    "init_commands": []
   },
   "schema": {
     "databases": ["str"],
@@ -33,7 +35,9 @@
       "telemetry": "list(off|basic)",
       "maxmemory": "str?",
       "maxcpus": "int(1,)?"
-    }
+    },
+    "system_packages": ["str"],
+    "init_commands": ["str"]
   },
   "imageaftercd": "husselhans/hassos-addon-timescaledb-{arch}"
 }

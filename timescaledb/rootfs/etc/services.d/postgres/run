@@ -2,61 +2,20 @@
 # ==============================================================================
 # Start PostgreSQL service if enabled
 # ==============================================================================
+declare postgres_data
+declare update
+declare postgres_pid
+declare version_file
+
 postgres_data=/data/postgres
-new_install=false
+version_file=/data/version
 update=false
 
-# Init data directory
-if ! bashio::fs.directory_exists "${postgres_data}"; then
-    bashio::log.info "Creating a new PostgreSQL initial system.."
-	# Create postgress directory in data directory
-    new_install=true
-	mkdir -p ${postgres_data}
-	bashio::addon.version > /data/version
-else
-    bashio::log.info "Using existing PostgreSQL installation.."
-	# Check if we need to update
-	if [[ $(< /data/version) != $(bashio::addon.version) ]]; then
-		bashio::log.notice "Addon was updated to version: ${bashio::addon.version}"
-		update=true
-	fi
+# Check if we need to update
+if [[ $(< ${version_file}) != $(bashio::addon.version) ]]; then
+	bashio::log.notice "Addon was updated to version: ${bashio::addon.version}"
+	update=true
 fi
-
-# Always re-apply permissions, because they seem to be reset after a snapshot restore
-chown -R postgres:postgres ${postgres_data}
-chmod 700 ${postgres_data}
-
-# Initialize for new installs
-if bashio::var.true "${new_install}"; then
-    bashio::log.info "Initializing postgres directory.."
-
-	# Init data-directory
-	su - postgres -c "initdb -D ${postgres_data}"
-	# Set timescaledb as being enabled in the postgres config file.
-	sed -r -i "s/[#]*\s*(shared_preload_libraries)\s*=\s*'(.*)'/\1 = 'timescaledb,\2'/;s/,'/'/" ${postgres_data}/postgresql.conf
-	# Password protect IPv4 hosts by default
-	echo "host    all             all             0.0.0.0/0               md5" >> ${postgres_data}/pg_hba.conf
-	echo "local    all             all                                    md5" >> ${postgres_data}/pg_hba.conf
-	echo "local    all             all                                   peer" >> ${postgres_data}/pg_hba.conf
-	# Listen on all addresses (*)
-	sed -r -i "s/[#]listen_addresses.=.'.*'/listen_addresses\ \=\ \'\*\'/g" ${postgres_data}/postgresql.conf
-	# Set telemetry level
-	echo "timescaledb.telemetry_level=$(bashio::config 'timescaledb.telemetry')" >> ${postgres_data}/postgresql.conf
-
-else
-	# Set telemetry level
-	sed -r -i "s/timescaledb.telemetry_level.=.'.*'/timescaledb.telemetry_level=$(bashio::config 'timescaledb.telemetry')/g" ${postgres_data}/postgresql.conf
-fi
-bashio::log.info "done"
-
-# Apply mem/cpu tuning settings
-bashio::log.info "Tuning resources.."
-chmod 707 "/usr/share/timescaledb/002_timescaledb_tune.sh"
-TS_TUNE_MEMORY=$(bashio::config 'timescaledb.maxmemory') \
-	TS_TUNE_NUM_CPUS=$(bashio::config 'timescaledb.maxcpus') \
-	POSTGRESQL_CONF_DIR=${postgres_data} \
-	/usr/share/timescaledb/002_timescaledb_tune.sh
-bashio::log.info "done"
 
 # Start Postgres
 bashio::log.info "Starting PostgreSQL.."
@@ -70,10 +29,13 @@ while ! psql -U "postgres" postgres -c "" 2> /dev/null; do
 done
 
 # Create extensions timescaledb in initial databases
-if bashio::var.true "${new_install}"; then
+if [[ ! -f "/data/initialized" ]]; then
+	bashio::log.info "Setting up postgres user.."
 	psql -U "postgres" postgres -c "ALTER USER postgres WITH PASSWORD 'homeassistant';"
+	bashio::log.info "Enabling Timescale Extension for default databases.."
 	psql -U "postgres" postgres -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 	psql -U "postgres" template1 -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
+	touch /data/initialized
 fi
 
 # Update timescale when needed
@@ -107,7 +69,7 @@ bashio::log.info "done"
 if bashio::var.true "${update}"; then
 	bashio::log.info "Exiting update mode and restarting pgAgent."
 	# Write new addon-version
-	bashio::addon.version > /data/version
+	bashio::addon.version > ${version_file}
 	# And restart S6 pgAgent service
 	s6-svc -r /var/run/s6/services/pgagent
 fi

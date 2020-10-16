@@ -2,11 +2,14 @@
 # ==============================================================================
 # Start PgAgent service if enabled
 # ==============================================================================
+declare update
+declare version_file
 
+update=false;
+version_file=/data/version
 
 # Check for updates
-update=false
-if [[ $(< /data/version) != $(bashio::addon.version) ]]; then
+if [[ $(< ${version_file}) != $(bashio::addon.version) ]]; then
 	update=true
 fi
 
