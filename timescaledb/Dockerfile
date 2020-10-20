@@ -17,6 +17,7 @@ RUN apk update && apk add --no-cache git \
 	# Fixup build arch to be compatible with GO cross compile
 	&& REAL_ARCH="$BUILD_ARCH" \
 	&& if [[ ${REAL_ARCH} == "aarch64" ]]; then export REAL_ARCH="arm64"; fi \
+	&& if [[ ${REAL_ARCH} == "armv7" ]]; then export REAL_ARCH="arm"; fi \
     # Build timescaledb-tune
     && cd timescaledb-tune/cmd/timescaledb-tune \
     && git fetch && git checkout --quiet $(git describe --abbrev=0) \
@@ -121,7 +122,8 @@ RUN set -ex \
 # 3.0.2-r0
 RUN set -ex \
     && apk add --no-cache \
-	postgis
+    --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/ \
+	postgis openexr@edge json-c@edge poppler@edge
 
 # --------------------------------------
 # Finish image
