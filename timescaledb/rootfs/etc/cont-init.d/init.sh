@@ -58,3 +58,8 @@ TS_TUNE_MEMORY=$(bashio::config 'timescaledb.maxmemory') \
 	POSTGRESQL_CONF_DIR=${postgres_data} \
 	/usr/share/timescaledb/002_timescaledb_tune.sh
 bashio::log.info "done"
+
+# Appy max connections 
+bashio::log.info "Applying max connections.."
+sed -i -e "/max_connections =/ s/= .*/= $(bashio::config 'max_connections')/" ${postgres_data}/postgresql.conf
+bashio::log.info "done"
