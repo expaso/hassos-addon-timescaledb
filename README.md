@@ -64,7 +64,10 @@ Example add-on configuration:
       "telemetry": "basic",
       "maxmemory": "512MB",
       "maxcpus": "4"
-      }
+      },
+      "max_connections": 20,
+      "system_packages": [],
+      "init_commands": []
  }
 ```
 
@@ -103,6 +106,32 @@ Or leave empty for accepting auto-tune.
 See also:
 https://docs.timescale.com/latest/getting-started/configuring
 for further tuning. Your Postgres.config file is located in the addon's data directory.
+
+### Option: `max_connections`
+
+Sets the maximum number of connections that PostgreSql will accept.
+Setting this higher could lead to more memory usage.
+
+Example: `max_connections=30`
+
+
+### Option: `system_packages`
+
+Advanced users only!
+A list of extra alpine packages to iunstall during addon-startup.
+
+Example: ['nano']
+
+
+### Option: `init_commands`
+
+Advanced users only!
+A list of extra commands to run during startup. 
+
+To alter something in the postgresql.conf file for example:
+
+Example: ['sed -i -e "/max_connections =/ s/= .*/= 50/" /data/postgres/postgresql.conf']
+
 
 ## Usage
 
