@@ -1,13 +1,13 @@
-ARG BUILD_FROM
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:9.1.2
+ARG BUILD_ARCH=aarch64
 
 ###########################################
 # Build TimeScaleDB tools binaries in separate image
 ###########################################
 ARG GO_VERSION=1.14.0
-FROM golang:${GO_VERSION}-alpine AS tools
+FROM --platform=${BUILD_ARCH} golang:${GO_VERSION}-alpine AS tools
 
 ENV TOOLS_VERSION 0.8.1
-ARG BUILD_ARCH
 
 RUN apk update && apk add --no-cache git \
     && mkdir -p ${GOPATH}/src/github.com/timescale/ \
@@ -36,12 +36,13 @@ RUN apk update && apk add --no-cache git \
 FROM $BUILD_FROM
 
 # --------------------------------------
-# Add PostgreSql 12.4
+# Add PostgreSql 12.5
 # --------------------------------------
-ENV POSTGRES_VERSION=12.4-r1
+ENV POSTGRES_VERSION=12.5-r0
 RUN apk add --no-cache \
-    postgresql>${POSTGRES_VERSION} \
-    postgresql-dev>${POSTGRES_VERSION}
+    --repository http://dl-cdn.alpinelinux.org/alpine/v3.12/main/ \
+    postgresql=${POSTGRES_VERSION} \
+    postgresql-dev=${POSTGRES_VERSION}
 
 # Create it's run directory
 RUN mkdir -p /run/postgresql \
@@ -53,10 +54,10 @@ RUN mkdir -p /run/postgresql \
 COPY --from=tools /go/bin/* /usr/local/bin/
 
 # --------------------------------------
-# Build TimescaleDB 1.7.4
+# Build TimescaleDB 2.0.1
 # --------------------------------------
 # Fix versions
-ENV TIMESCALEDB_VERSION 1.7.4
+ENV TIMESCALEDB_VERSION 2.0.1
 # Enable this if you only want the OSS parts
 #ENV OSS_ONLY -DAPACHE_ONLY=1
 RUN set -ex \
@@ -67,7 +68,8 @@ RUN set -ex \
                 openssl-dev \
                 tar \
     && mkdir -p /build/ \
-    && git clone https://github.com/timescale/timescaledb /build/timescaledb\
+    && git clone https://github.com/timescale/timescaledb /build/timescaledb \
+    \
     && apk add --no-cache --virtual .build-deps \
                 coreutils \
                 dpkg-dev dpkg \
@@ -75,12 +77,15 @@ RUN set -ex \
                 libc-dev \
                 make \
                 cmake \
-                util-linux-dev\
+                util-linux-dev \
+    \
+    # Build current version
     && cd /build/timescaledb && rm -fr build \
     && git checkout ${TIMESCALEDB_VERSION} \
-    && ./bootstrap -DREGRESS_CHECKS=OFF -DPROJECT_INSTALL_METHOD="docker"${OSS_ONLY} \
+    && ./bootstrap -DREGRESS_CHECKS=OFF -DWARNINGS_AS_ERRORS=OFF -DPROJECT_INSTALL_METHOD="docker"${OSS_ONLY} \
     && cd build && make install \
     && cd ~ \
+    \
     && if [ "${OSS_ONLY}" != "" ]; then rm -f $(pg_config --pkglibdir)/timescaledb-tsl-*.so; fi \
     && apk del .fetch-deps .build-deps \
     && rm -rf /build 
@@ -119,11 +124,15 @@ RUN set -ex \
 # --------------------------------------
 # Add Postgis
 # --------------------------------------
-# 3.0.2-r0
+# 3.1.1-r1
 RUN set -ex \
     && apk add --no-cache \
     --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/ \
-	postgis openexr@edge json-c@edge poppler@edge
+	postgis openexr 
+RUN set -ex \
+    && apk add --no-cache \
+    --repository http://dl-cdn.alpinelinux.org/alpine/edge/main/ \
+    json-c poppler
 
 # --------------------------------------
 # Finish image
