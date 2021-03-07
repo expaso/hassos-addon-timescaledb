@@ -41,5 +41,5 @@
     "system_packages": ["str"],
     "init_commands": ["str"]
   },
-  "imageaftercd": "husselhans/hassos-addon-timescaledb-{arch}"
+  "image": "husselhans/hassos-addon-timescaledb-{arch}"
 }

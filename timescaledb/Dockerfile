@@ -1,11 +1,11 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:9.1.2
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:9.1.5
 ARG BUILD_ARCH=aarch64
 
 ###########################################
 # Build TimeScaleDB tools binaries in separate image
 ###########################################
 ARG GO_VERSION=1.14.0
-FROM --platform=${BUILD_ARCH} golang:${GO_VERSION}-alpine AS tools
+FROM golang:${GO_VERSION}-alpine AS tools
 
 ENV TOOLS_VERSION 0.8.1
 
@@ -36,11 +36,10 @@ RUN apk update && apk add --no-cache git \
 FROM $BUILD_FROM
 
 # --------------------------------------
-# Add PostgreSql 12.5
+# Add PostgreSql 13.2
 # --------------------------------------
-ENV POSTGRES_VERSION=12.5-r0
+ENV POSTGRES_VERSION=13.2-r0
 RUN apk add --no-cache \
-    --repository http://dl-cdn.alpinelinux.org/alpine/v3.12/main/ \
     postgresql=${POSTGRES_VERSION} \
     postgresql-dev=${POSTGRES_VERSION}
 
@@ -54,10 +53,10 @@ RUN mkdir -p /run/postgresql \
 COPY --from=tools /go/bin/* /usr/local/bin/
 
 # --------------------------------------
-# Build TimescaleDB 2.0.1
+# Build TimescaleDB 2.1.0
 # --------------------------------------
 # Fix versions
-ENV TIMESCALEDB_VERSION 2.0.1
+ENV TIMESCALEDB_VERSION 2.1.0
 # Enable this if you only want the OSS parts
 #ENV OSS_ONLY -DAPACHE_ONLY=1
 RUN set -ex \
@@ -127,12 +126,12 @@ RUN set -ex \
 # 3.1.1-r1
 RUN set -ex \
     && apk add --no-cache \
-    --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/ \
-	postgis openexr 
-RUN set -ex \
-    && apk add --no-cache \
     --repository http://dl-cdn.alpinelinux.org/alpine/edge/main/ \
     json-c poppler
+RUN set -ex \
+    && apk add --no-cache \
+    --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/ \
+	postgis openexr 
 
 # --------------------------------------
 # Finish image
