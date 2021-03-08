@@ -8,7 +8,7 @@ ARG GO_VERSION=1.14.0
 FROM --platform=${BUILD_ARCH} golang:${GO_VERSION}-alpine AS tools
 
 ENV TOOLS_VERSION 0.8.1
-
+RUN apk update
 RUN apk update && apk add --no-cache git \
     && mkdir -p ${GOPATH}/src/github.com/timescale/ \
     && cd ${GOPATH}/src/github.com/timescale/ \
@@ -22,12 +22,12 @@ RUN apk update && apk add --no-cache git \
     && cd timescaledb-tune/cmd/timescaledb-tune \
     && git fetch && git checkout --quiet $(git describe --abbrev=0) \
     && go get -d -v \
-    && GOOS="linux" GOARCH="${REAL_ARCH}" go build -o /go/bin/timescaledb-tune \
+    && CGO_ENABLED=1 GOOS="linux" GOARCH=${REAL_ARCH} go build -o /go/bin/timescaledb-tune \
     # Build timescaledb-parallel-copy
     && cd ${GOPATH}/src/github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy \
     && git fetch && git checkout --quiet $(git describe --abbrev=0) \
     && go get -d -v \
-    && GOOS="linux" GOARCH="${REAL_ARCH}" go build -o /go/bin/timescaledb-parallel-copy
+    && CGO_ENABLED=1 GOOS="linux" GOARCH=${REAL_ARCH} go build -o /go/bin/timescaledb-parallel-copy
 
 
 ####################################
