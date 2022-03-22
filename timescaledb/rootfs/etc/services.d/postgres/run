@@ -13,7 +13,7 @@ update=false
 
 # Check if we need to update
 if [[ $(< ${version_file}) != $(bashio::addon.version) ]]; then
-	bashio::log.notice "Addon was updated to version: $(bashio::addon.version). Performing database upgrade..."
+	bashio::log.notice "Addon was updated to version: $(bashio::addon.version). Performing database upgrades..."
 	update=true
 fi
 
@@ -37,21 +37,20 @@ if [[ -f "/data/firstrun" ]]; then
 	psql -U "postgres" template1 -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 fi
 
-# Update timescale when needed
-if bashio::var.true "${update}"; then
-    bashio::log.info "Updating system databases.."
-	psql -U "postgres" postgres -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
-	psql -U "postgres" template1 -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
-fi
-
 # Create all databases if not exist
 for database in $(bashio::config "databases"); do
     bashio::log.info "Create database if not exist: '${database}'"
 	psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '${database}'" | grep -q 1 || psql -U postgres -c "CREATE DATABASE ${database}"
 done
+
 bashio::log.info "done"
 
-# Enable the timescale-extentions for all indicated databases
+# Enable the timescale-extensions for all indicated databases
+if bashio::var.true "${update}"; then
+    bashio::log.info "Updating Timescale Extension for system databases.."
+	psql -U "postgres" postgres -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
+	psql -U "postgres" template1 -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
+fi
 for database in $(bashio::config "timescale_enabled"); do
 	if bashio::var.true "${update}"; then
 		# Update timescale extention, as per: https://docs.timescale.com/latest/using-timescaledb/update-db
@@ -62,6 +61,13 @@ for database in $(bashio::config "timescale_enabled"); do
 		psql -U "postgres" ${database} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 	fi
 done
+
+#  Upgrade all postGIS extensions..
+for database in $(bashio::config "databases"); do
+    bashio::log.info "Upgrading PostGIS for database: '${database}'"
+	psql -U "postgres" ${database} -c "SELECT PostGIS_Extensions_Upgrade();" || true
+done
+
 bashio::log.info "done"
 
 # Exit update mode

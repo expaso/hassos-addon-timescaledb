@@ -18,7 +18,6 @@ while ! psql -U "postgres" postgres -c "" 2> /dev/null; do
 	sleep 1
 done
 
-
 # Check if we need to update..
 if bashio::var.true "${update}"; then
 	bashio::log.info "Waiting for update to complete.."
