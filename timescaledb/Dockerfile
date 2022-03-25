@@ -188,13 +188,13 @@ RUN set -ex \
 # --------------------------------------------------------------------------------------------
 # Copy old pre-compiled versions of postgresql extentions from the old plugin (never trust old alpine images ;)
 COPY --from=addon-pg12 /usr/lib/postgresql/* /usr/lib/postgresql12/
-COPY --from=addon-pg12 /usr/lib/libproj* /usr/lib
+COPY --from=addon-pg12 /usr/lib/libproj* /usr/lib/
 
 # Copy new timescale version build against postgres-12, and copy over to postgresql12 directory on the new addon.
 # Yes! I know it looks like we're copying over from the wrong postgresql version (14), but it's just a build-glitch
 # using the wrong foldername (postgresql14 instead of 12).. sigh..not my fault.
-COPY --from=timescale-pg12 /usr/lib/postgresql14/* /usr/lib/postgresql12
-COPY --from=timescale-pg12 /usr/lib/postgresql14/* /usr/lib/postgresql12
+COPY --from=timescale-pg12 /usr/lib/postgresql14/* /usr/lib/postgresql12/
+COPY --from=timescale-pg12 /usr/lib/postgresql14/* /usr/lib/postgresql12/
 COPY --from=timescale-pg12 /usr/share/postgresql14/extension/* /usr/share/postgresql12/extension/
 
 # Fixup a packaging problem with an Alpine Package..
