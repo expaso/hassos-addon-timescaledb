@@ -194,8 +194,12 @@ COPY --from=addon-pg12 /usr/lib/libproj* /usr/lib/
 # Yes! I know it looks like we're copying over from the wrong postgresql version (14), but it's just a build-glitch
 # using the wrong foldername (postgresql14 instead of 12).. sigh..not my fault.
 COPY --from=timescale-pg12 /usr/lib/postgresql14/* /usr/lib/postgresql12/
-COPY --from=timescale-pg12 /usr/lib/postgresql14/* /usr/lib/postgresql12/
+# Dumb fix for a docker build: https://github.com/moby/moby/issues/37965
+RUN true 
+
 COPY --from=timescale-pg12 /usr/share/postgresql14/extension/* /usr/share/postgresql12/extension/
+# Dumb fix for a docker build: https://github.com/moby/moby/issues/37965
+RUN true
 
 # Fixup a packaging problem with an Alpine Package..
 RUN cp /usr/share/postgresql14/extension/postgis--unpackaged--3.2.1.sql /usr/share/postgresql14/extension/postgis--ANY--3.2.1.sql
