@@ -5,7 +5,7 @@ ARG BUILD_ARCH=aarch64
 ###########################################
 ARG GO_VERSION=1.14.0
 
-FROM --platform=${TARGETPLATFORM} golang:${GO_VERSION}-alpine AS tools
+FROM golang:${GO_VERSION}-alpine AS tools
 
 RUN apk update && apk add --no-cache git \
     && go get github.com/timescale/timescaledb-tune/cmd/timescaledb-tune \
