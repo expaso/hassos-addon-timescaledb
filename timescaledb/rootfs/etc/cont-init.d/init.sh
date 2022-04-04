@@ -64,7 +64,11 @@ upgradePostgreSQL12to14 () {
 	# And upgrade PostgreSQL
 	bashio::log.notice "Upgrading PostgreSql..."
 
-	#First, start postgres on the old data-dir
+	# Backup old HBA.conf and create a temp one...
+	mv ${postgres_data}12/pg_hba.conf ${postgres_data}12/pg_hba_backup.conf
+	echo "local    all             all                                     trust" > ${postgres_data}12/pg_hba.conf
+
+	#Start postgres on the old data-dir
 	bashio::log.info "Starting PostgreSQL-12 first.."
 	su - postgres -c "/usr/libexec/postgresql12/postgres -D ${postgres_data}12" &
 	postgres_pid=$!
@@ -79,7 +83,11 @@ upgradePostgreSQL12to14 () {
 
 	# Stop server
 	kill ${postgres_pid}
-	wait ${postgres_pid}
+	wait ${postgres_pid} || true
+
+	# Restore HBA.CONF
+	rm ${postgres_data}12/pg_hba.conf
+	mv ${postgres_data}12/pg_hba_backup.conf ${postgres_data}12/pg_hba.conf
 
 	# And upgrade!
 	bashio::log.notice "Upgrading databases.."
@@ -112,6 +120,14 @@ if bashio::var.true "${new_install}"; then
 	bashio::addon.version > ${version_file}
 	initializeDataDirectory
 else
+
+	# # Check if an aborted upgrade is present.. (not working.. some users already upgraded..)
+	# if bashio::fs.directory_exists "${postgres_data}12"; then
+	# 	bashio::log.notice "An aborted upgrade from 12 to 14 was detected. Retrying..."
+	# 	mv ${postgres_data} ${postgres_data}_backup_2_0_1 || true
+	# 	mv ${postgres_data}12 ${postgres_data} || true
+	# fi
+
 	# Check if we need to upgrade from 12 to 14.
 	if [[ $(< ${postgres_data}/PG_VERSION) == "12" ]]; then
 		bashio::log.notice "A database upgrade is required from Postgres 12."

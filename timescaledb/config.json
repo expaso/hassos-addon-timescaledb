@@ -10,7 +10,7 @@
   "boot": "auto",
   "init": false,
   "map": ["share:rw"],  
-  "timeout": 20,
+  "timeout": 60,
   "ports": {
     "5432/tcp": null
   },

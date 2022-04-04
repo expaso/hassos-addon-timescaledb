@@ -3,7 +3,7 @@
 To build the lastest version using local docker, switch to the folder where the `dockerfile` resides, and run:
 
 ```
-docker build --tag husselhans/hassos-addon-timescaledb-aarch64:dev .
+docker build --platform linux/aarch64 --tag husselhans/hassos-addon-timescaledb-aarch64:dev .
 ```
 The dockerfile already contains the default build architecture and the default base image:
 
