@@ -42,12 +42,23 @@ upgradeTimeScaleExtension () {
 	# Upgrade Timescale..
 	bashio::log.info "Upgrading Timescale extentions.."
 	bashio::log.info "Updating Timescale Extension for database system databases.."
-	psql -U "postgres" postgres -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
-	psql -U "postgres" template1 -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
-	for database in $(bashio::config "timescale_enabled"); do
-		bashio::log.info "Updating Timescale Extension for database: '${database}'"
-		psql -U "postgres" ${database} -X -c "ALTER EXTENSION timescaledb UPDATE;" || true
+
+	# Fetch all databases..
+	psql \
+		-X \
+		-U "postgres" \
+		-c "select datname from pg_database where datallowconn = true;" \
+		--set ON_ERROR_STOP=on \
+		--no-align \
+		-t \
+		--field-separator ' ' \
+		--quiet \
+	| while read datname; do
+		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'timescaledb';" | grep -q 1 \
+		&& (bashio::log.info "Try updating Timescale Extension for database: '${datname}'.."; 
+		(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb UPDATE;" || true))
 	done
+
 	bashio::log.info "done"
 }
 
@@ -57,9 +68,6 @@ upgradePostgreSQL12to14 () {
 
 	# Move the old data directory out of our way..
 	mv ${postgres_data} ${postgres_data}12
-
-	# Create a fresh data-directory
-	initializeDataDirectory
 
 	# And upgrade PostgreSQL
 	bashio::log.notice "Upgrading PostgreSql..."
@@ -74,7 +82,7 @@ upgradePostgreSQL12to14 () {
 	postgres_pid=$!
 
 	# Wait for postgres to become available..
-	while ! psql -U "postgres" postgres -c "" 2> /dev/null; do
+	while ! psql -X -U "postgres" postgres -c "" 2> /dev/null; do
 		sleep 1
 	done
 
@@ -88,6 +96,9 @@ upgradePostgreSQL12to14 () {
 	# Restore HBA.CONF
 	rm ${postgres_data}12/pg_hba.conf
 	mv ${postgres_data}12/pg_hba_backup.conf ${postgres_data}12/pg_hba.conf
+
+	# Create a fresh data-directory
+	initializeDataDirectory
 
 	# And upgrade!
 	bashio::log.notice "Upgrading databases.."
