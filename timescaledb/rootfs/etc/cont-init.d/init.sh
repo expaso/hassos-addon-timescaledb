@@ -55,7 +55,7 @@ upgradeTimeScaleExtension () {
 		--quiet \
 	| while read datname; do
 		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'timescaledb';" | grep -q 1 \
-		&& (bashio::log.info "Try updating Timescale Extension for database: '${datname}'.."; 
+		&& (bashio::log.info "Try updating Timescale Extension for database: '${datname}'.."; \
 		(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb UPDATE;" || true))
 	done
 
@@ -105,6 +105,8 @@ upgradePostgreSQL12to14 () {
 	cd ${postgres_data}12
 	if su -c "pg_upgrade --old-bindir=/usr/libexec/postgresql12 --new-bindir=/usr/libexec/postgresql14 --old-datadir=${postgres_data}12 --new-datadir=${postgres_data} --link --username=postgres" -s /bin/sh postgres; then
 		bashio::log.notice "PostgreSQL upgraded succesfully!"
+		# Remove the old cluster...
+		rm -r ${postgres_data}12
 		return 0
 	else
 		# Rollback..
@@ -132,6 +134,17 @@ if bashio::var.true "${new_install}"; then
 	initializeDataDirectory
 else
 
+	# Check if we need to restore again.
+	if $(bashio::config.true 'retry_upgrade'); then 
+		if bashio::fs.directory_exists "${postgres_data}12"; then
+			bashio::log.notice "An aborted upgrade from Postgres 12 was detected. Restoring.."
+			rm -r ${postgres_data}
+			mv ${postgres_data}12 ${postgres_data}
+		else
+			bashio::config.suggest.false 'retry_upgrade' 'This option is only for temporary reasons: to recover from a failed upgrade.'
+		fi
+	fi
+
 	# # Check if an aborted upgrade is present.. (not working.. some users already upgraded..)
 	# if bashio::fs.directory_exists "${postgres_data}12"; then
 	# 	bashio::log.notice "An aborted upgrade from 12 to 14 was detected. Retrying..."
@@ -143,14 +156,13 @@ else
 	if [[ $(< ${postgres_data}/PG_VERSION) == "12" ]]; then
 		bashio::log.notice "A database upgrade is required from Postgres 12."
 		if upgradePostgreSQL12to14; then
-			# Restart addon.
-			sleep 3
-			bashio::addon.restart
+			bashio::log.notice "Upgrade was succesful"
 		else
-			bashio::log.error "Upgrade was not succesfull."
+			bashio::log.error "Upgrade was not succesful."
 			exit 1
 		fi
 	fi
+
 fi
 
 bashio::log.info "done"

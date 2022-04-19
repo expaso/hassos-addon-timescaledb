@@ -27,7 +27,8 @@
     },
     "max_connections": 20,
     "system_packages": [],
-    "init_commands": []
+    "init_commands": [],
+    "retry_upgrade": false
   },
   "schema": {
     "databases": ["str"],
@@ -39,7 +40,8 @@
     },
     "max_connections": "int(20,)",
     "system_packages": ["str"],
-    "init_commands": ["str"]
+    "init_commands": ["str"],
+    "retry_upgrade": "bool?"
   },
   "image": "husselhans/hassos-addon-timescaledb-{arch}"
 }

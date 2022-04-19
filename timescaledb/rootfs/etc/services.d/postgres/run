@@ -56,23 +56,21 @@ if bashio::var.true "${update}"; then
 		--field-separator ' ' \
 		--quiet \
 	| while read datname; do
-
 		# Update Timescale when needed
 		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'timescaledb';" | grep -q 1 \
-			&& bashio::log.info "Try updating Timescale Extension for database: '${datname}'.."; \ 
-			(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb UPDATE;" || true)
+		&& bashio::log.info "Try updating Timescale Extension for database: '${datname}'.." \
+		&& psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb UPDATE;" || true
 
 		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'postgis';" | grep -q 1 \
-			&& bashio::log.info "Try updating Postgis Extension for database: '${datname}'.."; \ 
-			(psql -X -U postgres -d ${datname} -c "SELECT PostGIS_Extensions_Upgrade();" || true)
+		&& bashio::log.info "Try updating Postgis Extension for database: '${datname}'.." \
+		&& psql -X -U postgres -d ${datname} -c "SELECT PostGIS_Extensions_Upgrade();" || true
 	done
 fi
 
 # Enable the timescale-extensions for all indicated databases
 for database in $(bashio::config "timescale_enabled"); do
-		bashio::log.info "Enabling Timescale Extension for database: '${database}'"
-		psql -U "postgres" ${database} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
-	fi
+	bashio::log.info "Enabling Timescale Extension for database: '${database}'"
+	psql -U "postgres" ${database} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 done
 
 bashio::log.info "done"
