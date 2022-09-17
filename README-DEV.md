@@ -25,11 +25,14 @@ docker run --rm --privileged -v ~/.docker:/root/.docker -v ~/hassos-addon-timesc
 
 This will use the base images from the `build.json` file, and the architecture specified. Use `--all` instead of `--aarch64`  to build all architectures within the `config.json`for example.
 
-## Push latest DEV image
+## Push latest DEV image to repository
 
 docker image push husselhans/hassos-addon-timescaledb-aarch64:dev
 
-## Pull latest DEV image
+## Pull latest DEV image into your raspoberry pi
+
+
+Coonect to a 
 
 From a system SSH (port 22222):
 
