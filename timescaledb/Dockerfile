@@ -1,4 +1,4 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:11.1.1
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:12.2.4
 ARG BUILD_ARCH=aarch64
 ###########################################
 # Build TimeScaleDB tools binaries in separate image
@@ -22,7 +22,7 @@ RUN apk update && apk add --no-cache git \
 # We use this to upgrade timescaleDB first
 ####################################################
 FROM $BUILD_FROM as timescale-pg12
-ENV TIMESCALEDB_VERSION 2.6.0
+ENV TIMESCALEDB_VERSION 2.8.0
 
 # Patch the include-path. For some reason, it won't get found by the c-compiler while builing timescale.
 ENV C_INCLUDE_PATH /usr/include/postgresql/12/server
@@ -75,12 +75,12 @@ RUN set -ex \
 FROM husselhans/hassos-addon-timescaledb-${BUILD_ARCH}:1.1.6 as addon-pg12
 FROM $BUILD_FROM
 
-ENV TIMESCALEDB_VERSION 2.6.0
+ENV TIMESCALEDB_VERSION 2.8.0
 
 # --------------------------------------
 # Add PostgreSql 14
 # --------------------------------------
-ENV POSTGRES_VERSION 14.2-r0
+ENV POSTGRES_VERSION 14.5-r0
 RUN apk add --no-cache \
     postgresql14-jit=${POSTGRES_VERSION} \
     postgresql14=${POSTGRES_VERSION} \
@@ -172,7 +172,7 @@ RUN set -ex \
 # --------------------------------------
 # Add Postgis and openexr
 # --------------------------------------
-ENV POSTGIS_VERSION 3.2.1-r1
+ENV POSTGIS_VERSION 3.2.3-r0
 RUN set -ex \
     && apk add --no-cache \
     --repository http://dl-cdn.alpinelinux.org/alpine/edge/main/ \
@@ -202,7 +202,7 @@ COPY --from=timescale-pg12 /usr/share/postgresql14/extension/* /usr/share/postgr
 RUN true
 
 # Fixup a packaging problem with an Alpine Package..
-RUN cp /usr/share/postgresql14/extension/postgis--unpackaged--3.2.1.sql /usr/share/postgresql14/extension/postgis--ANY--3.2.1.sql
+RUN cp /usr/share/postgresql14/extension/postgis--unpackaged--3.2.3.sql /usr/share/postgresql14/extension/postgis--ANY--3.2.3.sql
 
 # --------------------------------------
 # Finish image
