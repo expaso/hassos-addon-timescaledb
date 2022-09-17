@@ -135,7 +135,7 @@ if bashio::var.true "${new_install}"; then
 else
 
 	# Check if we need to restore again.
-	if $(bashio::config.true 'retry_upgrade'); then 
+	if $(bashio::config.true 'retry_upgrade'); then
 		if bashio::fs.directory_exists "${postgres_data}12"; then
 			bashio::log.notice "An aborted upgrade from Postgres 12 was detected. Restoring.."
 			rm -r ${postgres_data}
@@ -180,7 +180,20 @@ TS_TUNE_MEMORY=$(bashio::config 'timescaledb.maxmemory') \
 	/usr/share/timescaledb/002_timescaledb_tune.sh
 bashio::log.info "done"
 
-# Appy max connections 
+# Appy max connections
 bashio::log.info "Applying max connections.."
 sed -i -e "/max_connections =/ s/= .*/= $(bashio::config 'max_connections')/" ${postgres_data}/postgresql.conf
 bashio::log.info "done"
+
+# Appy stats_temp_directory
+STATS_TEMP_DIRECTORY=$(bashio::config 'stats_temp_directory')
+ABS_STATS_TEMP_DIRECTORY=$STATS_TEMP_DIRECTORY
+if [ -n $STATS_TEMP_DIRECTORY ];
+	if [[ "$STATS_TEMP_DIRECTORY" != /* ]]; then
+		ABS_STATS_TEMP_DIRECTORY=${postgres_data%%+(/)}/$STATS_TEMP_DIRECTORY
+	fi
+	bashio::log.info "Applying stats_temp_directory: $STATS_TEMP_DIRECTORY"
+	mkdir -p $ABS_STATS_TEMP_DIRECTORY
+	sed -i -E "s/[#]?(stats_temp_directory)\s*=.*/\1 = $STATS_TEMP_DIRECTORY/" ${postgres_data}/postgresql.conf
+	bashio::log.info "done"
+fi
