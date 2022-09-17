@@ -84,7 +84,8 @@ ENV POSTGRES_VERSION 14.5-r0
 RUN apk add --no-cache \
     postgresql14-jit=${POSTGRES_VERSION} \
     postgresql14=${POSTGRES_VERSION} \
-    postgresql14-dev=${POSTGRES_VERSION}
+    postgresql14-dev=${POSTGRES_VERSION} \
+    postgresql14-contrib=${POSTGRES_VERSION}
 
 # --------------------------------------
 # Add previous PostgreSql 12 (for pg_upgrade reasons)

@@ -11,6 +11,7 @@
   "init": false,
   "map": ["share:rw"],  
   "timeout": 60,
+  "tmpfs": true,
   "ports": {
     "5432/tcp": null
   },
@@ -28,7 +29,8 @@
     "max_connections": 20,
     "system_packages": [],
     "init_commands": [],
-    "retry_upgrade": false
+    "retry_upgrade": false,
+    "stats_temp_directory": "pg_stat_tmp"
   },
   "schema": {
     "databases": ["str"],
@@ -41,7 +43,8 @@
     "max_connections": "int(20,)",
     "system_packages": ["str"],
     "init_commands": ["str"],
-    "retry_upgrade": "bool?"
+    "retry_upgrade": "bool?",
+    "stats_temp_directory": "str?"
   },
   "image": "husselhans/hassos-addon-timescaledb-{arch}"
 }
