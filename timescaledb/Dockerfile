@@ -13,22 +13,6 @@ RUN apk update && apk add --no-cache git \
     && go install github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy@latest \
     && go install github.com/timescale/timescaledb-backup/cmd/ts-dump@latest \
     && go install github.com/timescale/timescaledb-backup/cmd/ts-restore@latest
-    #&& go build -o /go/bin/timescaledb-tune -v github.com/timescale/timescaledb-tune/cmd/timescaledb-tune \
-    #&& go build -o /go/bin/timescaledb-parallel-copy -v github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy \
-    #&& go build -o /go/bin/ts-dump -v github.com/timescale/timescaledb-backup/cmd/ts-dump \
-    #&& go build -o /go/bin/ts-restore -v github.com/timescale/timescaledb-backup/cmd/ts-restore
-
-
-# RUN apk update && apk add --no-cache git \
-#     && go get github.com/timescale/timescaledb-tune/cmd/timescaledb-tune \
-#     && go get github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy \
-#     && go get github.com/timescale/timescaledb-backup/cmd/ts-dump \
-#     && go get github.com/timescale/timescaledb-backup/cmd/ts-restore \
-#     #&& go get -d golang.org/x/sys/... && git -C $(go env GOPATH)/src/golang.org/x/sys reset --hard b0526f3d87448f0401ea3f7f3a81aa9e6ab4804d \
-#     && go build -o /go/bin/timescaledb-tune -v github.com/timescale/timescaledb-tune/cmd/timescaledb-tune \
-#     && go build -o /go/bin/timescaledb-parallel-copy -v github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy \
-#     && go build -o /go/bin/ts-dump -v github.com/timescale/timescaledb-backup/cmd/ts-dump \
-#     && go build -o /go/bin/ts-restore -v github.com/timescale/timescaledb-backup/cmd/ts-restore
 
 ####################################################
 # Build the latest timescaledb against postgres-12
@@ -197,6 +181,11 @@ RUN set -ex \
     --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/ \
 	-u postgis=${POSTGIS_VERSION} openexr 
 
+# --------------------------------------
+# Build pgAgent
+# --------------------------------------
+
+
 # --------------------------------------------------------------------------------------------
 # For upgrade reasons, copy over timescale and postgis extentions from the previous PG12 addon
 # --------------------------------------------------------------------------------------------
@@ -231,7 +220,13 @@ RUN set -ex \
 ENV \
     S6_SERVICES_GRACETIME=50000
 
+ENV \
+    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=50000
+
 # Copy data
 COPY rootfs /
+RUN chmod +x /etc/cont-init.d/* \
+    && chmod +x /etc/services.d/pgagent/* \
+    && chmod +x /etc/services.d/postgres/*
 
 WORKDIR /

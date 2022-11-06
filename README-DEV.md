@@ -32,8 +32,7 @@ docker image push husselhans/hassos-addon-timescaledb-aarch64:dev
 ## Pull latest DEV image into your raspoberry pi
 
 
-Coonect to a 
-
+SSH  to a home assistant: `ssh -i hassos -l root -p 22222 10.50.1.104`
 From a system SSH (port 22222):
 
 ```
