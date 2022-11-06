@@ -44,6 +44,8 @@ RUN set -ex \
     && mkdir -p /build/ \
     && git clone https://github.com/timescale/timescaledb /build/timescaledb \
     \
+    # Line below is a fix for a package problem. Remove when a new add-on base-image has been released.
+    && apk add musl \
     && apk add --no-cache --virtual .build-deps \
                 coreutils \
                 dpkg-dev dpkg \
@@ -107,6 +109,8 @@ COPY --from=tools /go/bin/* /usr/local/bin/
 #ENV OSS_ONLY -DAPACHE_ONLY=1
 
 RUN set -ex \
+    # Line below is a fix for a package problem. Remove when a new add-on base-image has been released.
+    && apk add musl \
     && apk add --no-cache --virtual .fetch-deps \
                 ca-certificates \
                 git \
