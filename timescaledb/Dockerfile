@@ -231,10 +231,8 @@ RUN set -ex \
 
 # Make sure that S6 is not so hard on our service startup/shutdown
 ENV \
-    S6_SERVICES_GRACETIME=50000
-
-ENV \
-    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=50000
+    S6_SERVICES_GRACETIME=50000 \
+    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
 
 # Copy data
 COPY rootfs /
