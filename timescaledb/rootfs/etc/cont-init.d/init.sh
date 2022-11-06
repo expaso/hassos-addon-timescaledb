@@ -185,15 +185,12 @@ bashio::log.info "Applying max connections.."
 sed -i -e "/max_connections =/ s/= .*/= $(bashio::config 'max_connections')/" ${postgres_data}/postgresql.conf
 bashio::log.info "done"
 
-# Appy stats_temp_directory
-STATS_TEMP_DIRECTORY=$(bashio::config 'stats_temp_directory')
-ABS_STATS_TEMP_DIRECTORY=$STATS_TEMP_DIRECTORY
-if [ -n $STATS_TEMP_DIRECTORY ]; then
-	if [[ "$STATS_TEMP_DIRECTORY" != /* ]]; then
-		ABS_STATS_TEMP_DIRECTORY=${postgres_data%%+(/)}/$STATS_TEMP_DIRECTORY
-	fi
-	bashio::log.info "Applying stats_temp_directory: $STATS_TEMP_DIRECTORY"
-	mkdir -p $ABS_STATS_TEMP_DIRECTORY
-	sed -i -E "s/[#]?(stats_temp_directory)\s*=.*/\1 = $STATS_TEMP_DIRECTORY/" ${postgres_data}/postgresql.conf
-	bashio::log.info "done"
-fi
+
+# Apply stats temp directory (REMOVE FOR PostGRES 15! It;s deprecated there!) https://pgpedia.info/s/stats_temp_directory.html
+#STATS_TEMP_DIRECTORY=${postgres_data%%+(/)}/timescaledb-addon/pg_stat
+STATS_TEMP_DIRECTORY=/tmp/pg_stat_tmp/
+bashio::log.info "Applying stats_temp_directory: ${STATS_TEMP_DIRECTORY}"
+mkdir -p ${STATS_TEMP_DIRECTORY}
+chown -R postgres:postgres ${STATS_TEMP_DIRECTORY}
+sed -i -E "s~[#]?(stats_temp_directory)\s*=.*~\1 = '$STATS_TEMP_DIRECTORY'~" ${postgres_data}/postgresql.conf
+bashio::log.info "done"
