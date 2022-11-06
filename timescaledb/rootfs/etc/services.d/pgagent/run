@@ -20,19 +20,20 @@ done
 
 # Check if we need to update..
 if bashio::var.true "${update}"; then
-	bashio::log.info "Waiting for update to complete.."
+	bashio::log.info "PgAgent: Waiting for update to complete.."
 	while [[ $(< ${version_file}) != $(bashio::addon.version) ]]; do
-		sleep 1
-		bashio::log.info "."
+		sleep 5
+		bashio::log.info "PgAgent: Waiting for update to complete.."
 	done
 
 	bashio::log.info "Updating PgAgent Extension.."
 	psql -U "postgres" -d "postgres" -X -c "ALTER EXTENSION pgagent UPDATE;" || true >> /var/log/pgagent.run.log
-	exit 0;
-else
+fi
+
+if ! (psql -X -U postgres -d "postgres" -c "select 1 from pg_extension where extname = 'pgagent';" | grep -q 1); then
 	bashio::log.info "Enabling PgAgent Extension.."
 	psql -U "postgres" -d "postgres" -c "CREATE EXTENSION IF NOT EXISTS pgagent;" || true >> /var/log/pgagent.run.log
-fi
+fi;
 
 # And run the daemon in the foreground
 bashio::log.info "Starting PgAgent.."

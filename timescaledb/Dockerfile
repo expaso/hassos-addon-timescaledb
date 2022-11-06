@@ -1,4 +1,4 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:12.2.4
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:12.2.5
 ARG BUILD_ARCH=aarch64
 ###########################################
 # Build TimeScaleDB tools binaries in separate image
@@ -19,7 +19,7 @@ RUN apk update && apk add --no-cache git \
 # We use this to upgrade timescaleDB first
 ####################################################
 FROM $BUILD_FROM as timescale-pg12
-ENV TIMESCALEDB_VERSION 2.8.0
+ENV TIMESCALEDB_VERSION 2.8.1
 
 # Patch the include-path. For some reason, it won't get found by the c-compiler while builing timescale.
 ENV C_INCLUDE_PATH /usr/include/postgresql/12/server
@@ -70,9 +70,10 @@ RUN set -ex \
 # Now build image and copy in tools
 ####################################
 FROM husselhans/hassos-addon-timescaledb-${BUILD_ARCH}:1.1.6 as addon-pg12
+FROM husselhans/hassos-addon-timescaledb-${BUILD_ARCH}:2.0.1 as addon-previous
 FROM $BUILD_FROM
 
-ENV TIMESCALEDB_VERSION 2.8.0
+ENV TIMESCALEDB_VERSION 2.8.1
 
 # --------------------------------------
 # Add PostgreSql 14
@@ -187,7 +188,7 @@ RUN set -ex \
 
 
 # --------------------------------------------------------------------------------------------
-# For upgrade reasons, copy over timescale and postgis extentions from the previous PG12 addon
+# PG12 Upgrade: For upgrade reasons, copy over timescale and postgis extentions from the previous PG12 addon
 # --------------------------------------------------------------------------------------------
 # Copy old pre-compiled versions of postgresql extentions from the old plugin (never trust old alpine images ;)
 COPY --from=addon-pg12 /usr/lib/postgresql/* /usr/lib/postgresql12/
@@ -206,6 +207,14 @@ RUN true
 
 # Fixup a packaging problem with an Alpine Package..
 RUN cp /usr/share/postgresql14/extension/postgis--unpackaged--3.2.3.sql /usr/share/postgresql14/extension/postgis--ANY--3.2.3.sql
+
+# Fixup a packaging problem with an Alpine Package for PostGIS
+RUN cp /usr/share/postgresql14/extension/postgis--unpackaged--3.2.3.sql /usr/share/postgresql14/extension/postgis--ANY--3.2.3.sql
+
+# Copy over all addons of previous addon to the new one
+COPY --from=addon-previous /usr/lib/postgresql14/* /usr/lib/postgresql14/
+COPY --from=addon-previous /usr/lib/libproj* /usr/lib/
+
 
 # --------------------------------------
 # Finish image

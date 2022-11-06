@@ -24,7 +24,7 @@
     "timescaledb": { 
       "telemetry": "basic",
       "maxmemory": "512MB",
-      "maxcpus": "4"
+      "maxcpus": 4
     },
     "max_connections": 20,
     "system_packages": [],

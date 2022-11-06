@@ -41,7 +41,7 @@ initializeDataDirectory () {
 upgradeTimeScaleExtension () {
 	# Upgrade Timescale..
 	bashio::log.info "Upgrading Timescale extentions.."
-	bashio::log.info "Updating Timescale Extension for database system databases.."
+	bashio::log.info "Updating Timescale Extension for system databases.."
 
 	# Fetch all databases..
 	psql \
@@ -188,7 +188,7 @@ bashio::log.info "done"
 # Appy stats_temp_directory
 STATS_TEMP_DIRECTORY=$(bashio::config 'stats_temp_directory')
 ABS_STATS_TEMP_DIRECTORY=$STATS_TEMP_DIRECTORY
-if [ -n $STATS_TEMP_DIRECTORY ];
+if [ -n $STATS_TEMP_DIRECTORY ]; then
 	if [[ "$STATS_TEMP_DIRECTORY" != /* ]]; then
 		ABS_STATS_TEMP_DIRECTORY=${postgres_data%%+(/)}/$STATS_TEMP_DIRECTORY
 	fi
