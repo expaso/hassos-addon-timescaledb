@@ -175,7 +175,7 @@ RUN set -ex \
 # --------------------------------------
 # Add Postgis and openexr
 # --------------------------------------
-ENV POSTGIS_VERSION 3.2.3-r0
+ENV POSTGIS_VERSION 3.2.3-r1
 RUN set -ex \
     && apk add --no-cache \
     --repository http://dl-cdn.alpinelinux.org/alpine/edge/main/ \
