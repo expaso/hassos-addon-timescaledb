@@ -44,6 +44,7 @@ RUN set -ex \
     && mkdir -p /build/ \
     && git clone https://github.com/timescale/timescaledb /build/timescaledb \
     \
+    && apk add --no-cache -u musl \
     && apk add --no-cache --virtual .build-deps \
                 coreutils \
                 dpkg-dev dpkg \
@@ -83,7 +84,12 @@ RUN apk add --no-cache \
     postgresql14-jit=${POSTGRES_VERSION} \
     postgresql14=${POSTGRES_VERSION} \
     postgresql14-dev=${POSTGRES_VERSION} \
+    postgresql14-contrib-jit=${POSTGRES_VERSION} \
     postgresql14-contrib=${POSTGRES_VERSION}
+
+# Add JIT support
+RUN apk add --no-cache \
+	-u llvm12-libs
 
 # --------------------------------------
 # Add previous PostgreSql 12 (for pg_upgrade reasons)
@@ -116,6 +122,7 @@ RUN set -ex \
     && mkdir -p /build/ \
     && git clone https://github.com/timescale/timescaledb /build/timescaledb \
     \
+    && apk add --no-cache -u musl \
     && apk add --no-cache --virtual .build-deps \
                 coreutils \
                 dpkg-dev dpkg \
@@ -150,6 +157,7 @@ RUN set -ex \
                 tar \
     && mkdir -p /build/ \
     && git clone https://github.com/postgres/pgagent /build/pgagent \
+    && apk add --no-cache -u musl \
     && apk add --no-cache --virtual .build-deps \
                 coreutils \
                 gcc \
