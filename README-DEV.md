@@ -8,7 +8,7 @@ docker build --platform linux/aarch64 --tag husselhans/hassos-addon-timescaledb-
 The dockerfile already contains the default build architecture and the default base image:
 
 ```
-ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:11.0.1
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:13.1.1
 ARG BUILD_ARCH=aarch64
 ```
 

@@ -1,4 +1,4 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:12.2.6
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:13.1.1
 ARG BUILD_ARCH=aarch64
 ###########################################
 # Build TimeScaleDB tools binaries in separate image
@@ -19,18 +19,19 @@ RUN apk update && apk add --no-cache git \
 # We use this to upgrade timescaleDB first
 ####################################################
 FROM $BUILD_FROM as timescale-pg12
-ENV TIMESCALEDB_VERSION 2.8.1
 
+ENV TIMESCALEDB_VERSION 2.9.2
+ENV POSTGRES_VERSION 12.13-r1
 # Patch the include-path. For some reason, it won't get found by the c-compiler while builing timescale.
-ENV C_INCLUDE_PATH /usr/include/postgresql/12/server
+ENV C_INCLUDE_PATH /usr/include/postgresql/12/server 
 
-ENV POSTGRES_VERSION 12.12-r0
+# Add postgresql 12
 RUN apk add --no-cache \
     postgresql12=${POSTGRES_VERSION} \
     postgresql12-dev=${POSTGRES_VERSION}
 
 # --------------------------------------
-# Build TimescaleDB
+# Build latest TimescaleDB
 # --------------------------------------
 # Enable this if you only want the OSS parts
 #ENV OSS_ONLY -DAPACHE_ONLY=1
@@ -55,10 +56,10 @@ RUN set -ex \
                 cmake \
                 util-linux-dev \
     \
-    # Build current version
+    # Build indicated version
     && cd /build/timescaledb && rm -fr build \
     && git checkout ${TIMESCALEDB_VERSION} \
-    && ./bootstrap -DREGRESS_CHECKS=OFF -DTAP_CHECKS=OFF -DGENERATE_DOWNGRADE_SCRIPT=ON -DWARNINGS_AS_ERRORS=OFF -DPROJECT_INSTALL_METHOD="docker"${OSS_ONLY} \
+    && ./bootstrap -DCMAKE_BUILD_TYPE=RelWithDebInfo -DREGRESS_CHECKS=OFF -DTAP_CHECKS=OFF -DGENERATE_DOWNGRADE_SCRIPT=ON -DWARNINGS_AS_ERRORS=OFF -DPROJECT_INSTALL_METHOD="docker"${OSS_ONLY} \
     && cd build && make install \
     && cd ~ \
     \
@@ -67,19 +68,27 @@ RUN set -ex \
     && rm -rf /build 
 
 
-####################################
-# Now build image and copy in tools
-####################################
+#Alias the previous images
 FROM husselhans/hassos-addon-timescaledb-${BUILD_ARCH}:1.1.6 as addon-pg12
-FROM husselhans/hassos-addon-timescaledb-${BUILD_ARCH}:2.0.1 as addon-previous
-FROM $BUILD_FROM
+FROM husselhans/hassos-addon-timescaledb-${BUILD_ARCH}:2.1.1 as addon-previous
 
-ENV TIMESCALEDB_VERSION 2.8.1
+FROM $BUILD_FROM AS addon
+
+#Versions
+ENV TIMESCALEDB_VERSION 2.9.2
+ENV POSTGRES_VERSION 14.6-r1
+ENV PGAGENT_VERSION REL-4_2_2
+ENV POSTGIS_VERSION 3.3.2
 
 # --------------------------------------
-# Add PostgreSql 14
+# PostgreSql 12 - Install (for pg_upgrade reasons)
 # --------------------------------------
-ENV POSTGRES_VERSION 14.5-r0
+RUN apk add --no-cache \
+    postgresql12
+
+# --------------------------------------
+# PostgreSql 14 - Install
+# --------------------------------------
 RUN apk add --no-cache \
     postgresql14-jit=${POSTGRES_VERSION} \
     postgresql14=${POSTGRES_VERSION} \
@@ -89,13 +98,7 @@ RUN apk add --no-cache \
 
 # Add JIT support
 RUN apk add --no-cache \
-	-u llvm12-libs
-
-# --------------------------------------
-# Add previous PostgreSql 12 (for pg_upgrade reasons)
-# --------------------------------------
-RUN apk add --no-cache \
-    postgresql12
+	-u llvm14-libs
 
 # Create it's run directory
 RUN mkdir -p /run/postgresql \
@@ -106,12 +109,12 @@ RUN mkdir -p /run/postgresql \
 # Copy over the tools
 COPY --from=tools /go/bin/* /usr/local/bin/
 
+
 # --------------------------------------
-# Build new TimescaleDB
+# TimescaleDB - Build and install
 # --------------------------------------
 # Enable this if you only want the OSS parts
 #ENV OSS_ONLY -DAPACHE_ONLY=1
-
 RUN set -ex \
     && apk add --no-cache --virtual .fetch-deps \
                 ca-certificates \
@@ -136,7 +139,9 @@ RUN set -ex \
     # Build current version
     && cd /build/timescaledb && rm -fr build \
     && git checkout ${TIMESCALEDB_VERSION} \
-    && ./bootstrap -DREGRESS_CHECKS=OFF -DTAP_CHECKS=OFF -DGENERATE_DOWNGRADE_SCRIPT=ON -DWARNINGS_AS_ERRORS=OFF -DPROJECT_INSTALL_METHOD="docker"${OSS_ONLY} \
+    && ./bootstrap -DCMAKE_BUILD_TYPE=RelWithDebInfo -DREGRESS_CHECKS=OFF -DTAP_CHECKS=OFF -DGENERATE_DOWNGRADE_SCRIPT=ON -DWARNINGS_AS_ERRORS=OFF -DPROJECT_INSTALL_METHOD="docker"${OSS_ONLY} \
+    # BUGFIX Line below is used to fix the error that <postgres.h> cannot be found, even though we have the postgres-dev package installed.
+    && export C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/include/postgresql/14/server \
     && cd build && make install \
     && cd ~ \
     \
@@ -145,9 +150,8 @@ RUN set -ex \
     && rm -rf /build 
 
 # --------------------------------------
-# Build pgAgent
+# pgAgent - Build and install
 # --------------------------------------
-ENV PGAGENT_VERSION REL-4_2_2
 RUN set -ex \
     && apk add --no-cache --virtual .fetch-deps \
                 ca-certificates \
@@ -176,48 +180,145 @@ RUN set -ex \
 	&& apk add --no-cache \
 				boost-libs
 
-# --------------------------------------
-# Add Postgis and openexr
-# --------------------------------------
-ENV POSTGIS_VERSION 3.2.3-r1
+# # --------------------------------------
+# # PostGIS - Add required packages for runtime (see postgis dependencies)
+# # --------------------------------------
+# # RUN set -ex \
+# #     && apk add --no-cache \
+# #     --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/main/ \
+
+# RUN set -ex \
+#     && apk -UvX http://dl-cdn.alpinelinux.org/alpine/edge/main \
+#     add --no-cache \
+#     --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
+# 	openexr \ 
+#     poppler \
+#     gdal \
+#     geos \
+#     json-c \
+#     libgcc \
+#     libpq \
+#     libstdc++ \
+#     libxml2 \ 
+#     musl \
+#     pcre \
+#     perl \
+#     proj \
+#     protobuf-c
+
+# # --------------------------------------
+# # PostGIS - Build and install
+# # --------------------------------------
+# RUN set -ex \
+#     && apk add --no-cache --virtual .fetch-deps \
+#                 ca-certificates \
+#                 git \
+#                 openssl \
+#                 openssl-dev \
+#                 tar \
+#                 wget \
+#     && mkdir -p /build/ \
+#     && wget -P /build https://download.osgeo.org/postgis/source/postgis-${POSTGIS_VERSION}.tar.gz \
+#     && apk add --no-cache --virtual .build-deps \
+#                 coreutils \
+#                 gcc \
+#                 make \
+#                 cmake \
+# 				build-base \
+#                 libxml2-dev \
+#                 protobuf-c-dev \
+#     && apk add --no-cache --virtual .community-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
+#                 geos-dev \
+#                 proj-dev \
+#                 gdal-dev \
+#     && cd /build \
+#     && tar xvzf postgis-c.tar.gz \
+#     && cd /build/postgis-${POSTGIS_VERSION} \
+#     && ./configure --with-pgconfig=/usr/libexec/postgresql14/pg_config \
+#     && make && make install \
+#     && cd ~ \
+#     && apk del .fetch-deps .build-deps .community-build-deps \
+#     && rm -rf /build 
+
 RUN set -ex \
-    && apk add --no-cache \
-    --repository http://dl-cdn.alpinelinux.org/alpine/edge/main/ \
-    json-c poppler
+    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
+    postgis=${POSTGIS_VERSION}-r1 
+
+# --------------------------------------
+# Timescaledb toolkit - Build and Install
+# --------------------------------------
+FROM addon AS timescaledb-toolkit
+ENV ALPINE_VERSION 3.17
+ENV TOOLKIT_VERSION 1.13.1
 RUN set -ex \
-    && apk -UvX http://dl-cdn.alpinelinux.org/alpine/edge/main \
-    add --no-cache \
-    --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/ \
-	-u postgis=${POSTGIS_VERSION} openexr 
+    && apk add --no-cache --virtual .fetch-deps \
+                ca-certificates \
+                git \
+                openssl \
+                openssl-dev \
+                tar \
+                wget \
+                curl \
+    && apk add --no-cache --virtual .build-deps \
+                coreutils \
+                gcc \
+                make \
+                cmake \
+				build-base \
+    && apk add --no-cache --virtual .community-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}/community/ \
+                rust \
+                cargo \
+    && cargo install cargo-pgx --version '^0.2' \
+    && cargo install rustfmt
 
-# --------------------------------------
-# Build pgAgent
-# --------------------------------------
+ENV PATH="/root/.cargo/bin:${PATH}"
 
+RUN set -ex \
+    && mkdir -p /build/ \
+    # && chown postgres:postgres -R /build \
+    # && chown postgres:postgres -R /usr/share/postgresql14 \
+    # && chown postgres:postgres -R /usr/lib/postgresql14 \        
+    && cd /build \
+        && git clone https://github.com/timescale/timescaledb-toolkit.git . \
+        && git checkout ${TOOLKIT_VERSION} \
+        && cd extension \
+        # initdb fails as root so generate the correct config ourselves
+        # && cargo pgx init --pg14 /usr/lib/postgresql/14/bin/pg_config        
+        && mkdir -p /root/.pgx \
+        && printf '[configs]\npg14="/usr/libexec/postgresql14/pg_config"\n' > /root/.pgx/config.toml \
+        && cargo pgx install --release --pg_config /usr/libexec/postgresql14/pg_config \
+        && cargo run --manifest-path ../tools/post-install/Cargo.toml -- /usr/libexec/postgresql14/pg_config \
+    && cd ~ \
+    && apk del .fetch-deps .build-deps .community-build-deps \
+    && rm -rf /build
 
-# --------------------------------------------------------------------------------------------
+####################################
+# Now build final image
+####################################
+FROM addon
+
+# Copy timescaledb-toolkit
+COPY --from=timescaledb-toolkit /usr/share/postgresql14 /usr/share/postgresql14
+COPY --from=timescaledb-toolkit /usr/lib/postgresql14 /usr/lib/postgresql14
+
+# -----------------------------------------------------------------------------------------------------------
 # PG12 Upgrade: For upgrade reasons, copy over timescale and postgis extentions from the previous PG12 addon
-# --------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------
 # Copy old pre-compiled versions of postgresql extentions from the old plugin (never trust old alpine images ;)
 COPY --from=addon-pg12 /usr/lib/postgresql/* /usr/lib/postgresql12/
 COPY --from=addon-pg12 /usr/lib/libproj* /usr/lib/
 
 # Copy new timescale version build against postgres-12, and copy over to postgresql12 directory on the new addon.
-# Yes! I know it looks like we're copying over from the wrong postgresql version (14), but it's just a build-glitch
-# using the wrong foldername (postgresql14 instead of 12).. sigh..not my fault.
-COPY --from=timescale-pg12 /usr/lib/postgresql14/* /usr/lib/postgresql12/
+COPY --from=timescale-pg12 /usr/lib/postgresql12/* /usr/lib/postgresql12/
 # Dumb fix for a docker build: https://github.com/moby/moby/issues/37965
 RUN true 
 
-COPY --from=timescale-pg12 /usr/share/postgresql14/extension/* /usr/share/postgresql12/extension/
+COPY --from=timescale-pg12 /usr/share/postgresql12/extension/* /usr/share/postgresql12/extension/
 # Dumb fix for a docker build: https://github.com/moby/moby/issues/37965
 RUN true
 
 # Fixup a packaging problem with an Alpine Package..
-RUN cp /usr/share/postgresql14/extension/postgis--unpackaged--3.2.3.sql /usr/share/postgresql14/extension/postgis--ANY--3.2.3.sql
-
-# Fixup a packaging problem with an Alpine Package for PostGIS
-RUN cp /usr/share/postgresql14/extension/postgis--unpackaged--3.2.3.sql /usr/share/postgresql14/extension/postgis--ANY--3.2.3.sql
+RUN cp /usr/share/postgresql14/extension/postgis--unpackaged--3.3.2.sql /usr/share/postgresql14/extension/postgis--ANY--3.3.2.sql
 
 # Copy over all addons of previous addon to the new one
 COPY --from=addon-previous /usr/lib/postgresql14/* /usr/lib/postgresql14/
@@ -240,8 +341,5 @@ ENV \
 
 # Copy data
 COPY rootfs /
-RUN chmod +x /etc/cont-init.d/* \
-    && chmod +x /etc/services.d/pgagent/* \
-    && chmod +x /etc/services.d/postgres/*
 
 WORKDIR /

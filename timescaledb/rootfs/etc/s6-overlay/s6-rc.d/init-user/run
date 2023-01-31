@@ -1,7 +1,8 @@
-#!/usr/bin/with-contenv bashio
+#!/command/with-contenv bashio
+# shellcheck shell=bash
 # ==============================================================================
-# Home Assistant Add-on: TimescaleDb
-# Executes user customizations on startup
+# Installs custom user packages
+# Persists user settings and installs custom user packages.
 # ==============================================================================
 
 # Install user configured/requested packages

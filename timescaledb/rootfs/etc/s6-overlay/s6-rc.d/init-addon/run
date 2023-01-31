@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv bashio
+#!/command/with-contenv bashio
 # ==============================================================================
 # Home Assistant Add-on: TimescaleDb
 # Initializes the container during startup
@@ -185,12 +185,16 @@ bashio::log.info "Applying max connections.."
 sed -i -e "/max_connections =/ s/= .*/= $(bashio::config 'max_connections')/" ${postgres_data}/postgresql.conf
 bashio::log.info "done"
 
-
-# Apply stats temp directory (REMOVE FOR PostGRES 15! It;s deprecated there!) https://pgpedia.info/s/stats_temp_directory.html
+# Apply stats temp directory (REMOVE FOR PostGRES 15! It's deprecated there!) https://pgpedia.info/s/stats_temp_directory.html
 #STATS_TEMP_DIRECTORY=${postgres_data%%+(/)}/timescaledb-addon/pg_stat
 STATS_TEMP_DIRECTORY=/tmp/pg_stat_tmp/
 bashio::log.info "Applying stats_temp_directory: ${STATS_TEMP_DIRECTORY}"
 mkdir -p ${STATS_TEMP_DIRECTORY}
 chown -R postgres:postgres ${STATS_TEMP_DIRECTORY}
 sed -i -E "s~[#]?(stats_temp_directory)\s*=.*~\1 = '$STATS_TEMP_DIRECTORY'~" ${postgres_data}/postgresql.conf
+bashio::log.info "done"
+
+# Remount tmpfs to allow executables from pgAgent
+bashio::log.info "Remounting /tmp to allow pgAgent to execute scripts.."
+mount -o remount,exec /tmp
 bashio::log.info "done"
