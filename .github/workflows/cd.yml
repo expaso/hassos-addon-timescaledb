@@ -15,8 +15,8 @@ jobs:
       - name: Build and push tagged Docker image
         run: |
           ADDON_VERSION=$( cut -c12- <<< ${{ github.ref }} )
-          sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.json
-          sed -i "s/imageaftercd/image/g" timescaledb/config.json
+          sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.yaml
+          sed -i "s/imageaftercd/image/g" timescaledb/config.yaml
           docker run --rm --privileged \
             -v ~/.docker:/root/.docker \
             -v /var/run/docker.sock:/var/run/docker.sock \
@@ -49,8 +49,8 @@ jobs:
           mkdir -p repository/timescaledb
           cp -v addon/README.md addon/timescaledb/config.json addon/timescaledb/*.png  repository/timescaledb
           cd repository
-          sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.json
-          sed -i "s/imageaftercd/image/g" timescaledb/config.json
+          sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.yaml
+          sed -i "s/imageaftercd/image/g" timescaledb/config.yaml
           git config --local user.email "hans@expaso.nl"
           git config --local user.name "Hans van Essen"
           git add .
