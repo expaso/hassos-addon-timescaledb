@@ -180,69 +180,70 @@ RUN set -ex \
 	&& apk add --no-cache \
 				boost-libs
 
-# # --------------------------------------
-# # PostGIS - Add required packages for runtime (see postgis dependencies)
-# # --------------------------------------
-# # RUN set -ex \
-# #     && apk add --no-cache \
-# #     --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/main/ \
-
+# --------------------------------------
+# PostGIS - Add required packages for runtime (see postgis dependencies)
+# --------------------------------------
 # RUN set -ex \
-#     && apk -UvX http://dl-cdn.alpinelinux.org/alpine/edge/main \
-#     add --no-cache \
-#     --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
-# 	openexr \ 
-#     poppler \
-#     gdal \
-#     geos \
-#     json-c \
-#     libgcc \
-#     libpq \
-#     libstdc++ \
-#     libxml2 \ 
-#     musl \
-#     pcre \
-#     perl \
-#     proj \
-#     protobuf-c
-
-# # --------------------------------------
-# # PostGIS - Build and install
-# # --------------------------------------
-# RUN set -ex \
-#     && apk add --no-cache --virtual .fetch-deps \
-#                 ca-certificates \
-#                 git \
-#                 openssl \
-#                 openssl-dev \
-#                 tar \
-#                 wget \
-#     && mkdir -p /build/ \
-#     && wget -P /build https://download.osgeo.org/postgis/source/postgis-${POSTGIS_VERSION}.tar.gz \
-#     && apk add --no-cache --virtual .build-deps \
-#                 coreutils \
-#                 gcc \
-#                 make \
-#                 cmake \
-# 				build-base \
-#                 libxml2-dev \
-#                 protobuf-c-dev \
-#     && apk add --no-cache --virtual .community-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
-#                 geos-dev \
-#                 proj-dev \
-#                 gdal-dev \
-#     && cd /build \
-#     && tar xvzf postgis-c.tar.gz \
-#     && cd /build/postgis-${POSTGIS_VERSION} \
-#     && ./configure --with-pgconfig=/usr/libexec/postgresql14/pg_config \
-#     && make && make install \
-#     && cd ~ \
-#     && apk del .fetch-deps .build-deps .community-build-deps \
-#     && rm -rf /build 
+#     && apk add --no-cache \
+#     --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/main/ \
 
 RUN set -ex \
-    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
-    postgis=${POSTGIS_VERSION}-r1 
+    && apk -UvX http://dl-cdn.alpinelinux.org/alpine/edge/main \
+    add --no-cache \
+    --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
+	openexr \ 
+    poppler \
+    gdal \
+    geos \
+    json-c \
+    libgcc \
+    libpq \
+    libstdc++ \
+    libxml2 \ 
+    musl \
+    pcre \
+    perl \
+    proj \
+    protobuf-c
+
+# --------------------------------------
+# PostGIS - Build and install
+# --------------------------------------
+RUN set -ex \
+    && apk add --no-cache --virtual .fetch-deps \
+                ca-certificates \
+                git \
+                openssl \
+                openssl-dev \
+                tar \
+                wget \
+    && mkdir -p /build/ \
+    && wget -P /build https://download.osgeo.org/postgis/source/postgis-${POSTGIS_VERSION}.tar.gz \
+    && apk add --no-cache --virtual .build-deps \
+                coreutils \
+                gcc \
+                make \
+                cmake \
+				build-base \
+                libxml2-dev \
+                protobuf-c-dev \
+    && apk add --no-cache --virtual .community-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
+                geos-dev \
+                proj-dev \
+                gdal-dev \
+    && cd /build \
+    && tar xvzf postgis-c.tar.gz \
+    && cd /build/postgis-${POSTGIS_VERSION} \
+    && ./configure --with-pgconfig=/usr/libexec/postgresql14/pg_config \
+    && make && make install \
+    && cd ~ \
+    && apk del .fetch-deps .build-deps .community-build-deps \
+    && rm -rf /build 
+
+# Below for Postgresql 15
+# RUN set -ex \
+#     apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
+#     postgis=${POSTGIS_VERSION}-r1 
 
 # --------------------------------------
 # Timescaledb toolkit - Build and Install
