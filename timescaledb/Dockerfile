@@ -27,6 +27,7 @@ ENV C_INCLUDE_PATH /usr/include/postgresql/12/server
 
 # Add postgresql 12
 RUN apk add --no-cache \
+    --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
     postgresql12=${POSTGRES_VERSION} \
     postgresql12-dev=${POSTGRES_VERSION}
 
