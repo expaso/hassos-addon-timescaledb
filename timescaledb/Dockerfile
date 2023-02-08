@@ -1,9 +1,21 @@
 ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:13.1.1
 ARG BUILD_ARCH=aarch64
+ARG GO_VERSION=1.19.0
+
+###########################################
+# Base Image fixes
+###########################################
+FROM $BUILD_FROM as addon-base
+
+# Fix libcrypto from the base-image
+RUN sed -i "s/libcrypto3=3.0.7-r2/libcrypto3=3.0.8-r0/g" /etc/apk/world \
+    && sed -i "s/libssl3=3.0.7-r2/libssl3=3.0.8-r0/g" /etc/apk/world \
+    && apk update \
+    && apk upgrade
+
 ###########################################
 # Build TimeScaleDB tools binaries in separate image
 ###########################################
-ARG GO_VERSION=1.19.0
 FROM golang:${GO_VERSION}-alpine AS tools
 
 ENV TOOLS_VERSION 0.8.1
@@ -18,18 +30,17 @@ RUN apk update && apk add --no-cache git \
 # Build the latest timescaledb against postgres-12
 # We use this to upgrade timescaleDB first
 ####################################################
-FROM $BUILD_FROM as timescale-pg12
+FROM addon-base as timescale-pg12
 
 ENV TIMESCALEDB_VERSION 2.9.2
 ENV POSTGRES_VERSION 12.13-r1
-# Patch the include-path. For some reason, it won't get found by the c-compiler while builing timescale.
+# Patch the include-path. For some reason, it won't get found by the c-compiler when building timescale.
 ENV C_INCLUDE_PATH /usr/include/postgresql/12/server 
 
 # Add postgresql 12
 RUN apk add --no-cache \
-    --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
-    postgresql12=${POSTGRES_VERSION} \
-    postgresql12-dev=${POSTGRES_VERSION}
+    postgresql12=$POSTGRES_VERSION \
+    postgresql12-dev=$POSTGRES_VERSION
 
 # --------------------------------------
 # Build latest TimescaleDB
@@ -73,7 +84,7 @@ RUN set -ex \
 FROM husselhans/hassos-addon-timescaledb-${BUILD_ARCH}:1.1.6 as addon-pg12
 FROM husselhans/hassos-addon-timescaledb-${BUILD_ARCH}:2.1.1 as addon-previous
 
-FROM $BUILD_FROM AS addon
+FROM addon-base AS addon
 
 #Versions
 ENV TIMESCALEDB_VERSION 2.9.2
@@ -189,9 +200,8 @@ RUN set -ex \
 #     --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/main/ \
 
 RUN set -ex \
-    && apk -UvX http://dl-cdn.alpinelinux.org/alpine/edge/main \
-    add --no-cache \
-    --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
+    && apk add --no-cache \
+    #--repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
 	openexr \ 
     poppler \
     gdal \
@@ -228,7 +238,8 @@ RUN set -ex \
 				build-base \
                 libxml2-dev \
                 protobuf-c-dev \
-    && apk add --no-cache --virtual .community-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
+    #&& apk add --no-cache --virtual .community-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/v3.17/community/ \
+    && apk add --no-cache --virtual .community-build-deps \
                 geos-dev \
                 proj-dev \
                 gdal-dev \
@@ -267,7 +278,8 @@ RUN set -ex \
                 make \
                 cmake \
 				build-base \
-    && apk add --no-cache --virtual .community-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}/community/ \
+    #&& apk add --no-cache --virtual .community-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}/community/ \
+    && apk add --no-cache --virtual .community-build-deps \
                 rust \
                 cargo \
     && cargo install cargo-pgx --version '^0.2' \
