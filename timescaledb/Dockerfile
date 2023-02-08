@@ -244,7 +244,7 @@ RUN set -ex \
                 proj-dev \
                 gdal-dev \
     && cd /build \
-    && tar xvzf postgis-c.tar.gz \
+    && tar xvzf postgis-${POSTGIS_VERSION}.tar.gz \
     && cd /build/postgis-${POSTGIS_VERSION} \
     && ./configure --with-pgconfig=/usr/libexec/postgresql14/pg_config \
     && make && make install \
