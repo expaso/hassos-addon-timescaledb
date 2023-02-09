@@ -277,15 +277,14 @@ RUN set -ex \
                 gcc \
                 make \
                 cmake \
-				build-base \
+		build-base \
     #&& apk add --no-cache --virtual .community-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}/community/ \
     && apk add --no-cache --virtual .community-build-deps \
                 rust \
                 cargo \
-    && cargo install cargo-pgx --version '^0.2' \
+    && export PATH="/root/.cargo/bin:${PATH}" \
+    && cargo install cargo-pgx \
     && cargo install rustfmt
-
-ENV PATH="/root/.cargo/bin:${PATH}"
 
 RUN set -ex \
     && mkdir -p /build/ \
