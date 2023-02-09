@@ -283,7 +283,7 @@ RUN set -ex \
                 rust \
                 cargo \
     && export PATH="/root/.cargo/bin:${PATH}" \
-    && cargo install cargo-pgx \
+    && cargo install cargo-pgx --version '^0.2'\
     && cargo install rustfmt
 
 RUN set -ex \
