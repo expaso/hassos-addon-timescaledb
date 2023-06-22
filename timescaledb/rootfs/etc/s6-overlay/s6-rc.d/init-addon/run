@@ -10,8 +10,9 @@ declare new_install
 postgres_data=/data/postgres
 version_file=/data/version
 new_install=false;
+minVersion
 
-# Applies permission to the data directory
+# Applies permission to the data directory for the postgres user
 applyPermissions () {
 	chown -R postgres:postgres ${postgres_data}
 	chmod 700 ${postgres_data}
@@ -62,23 +63,28 @@ upgradeTimeScaleExtension () {
 	bashio::log.info "done"
 }
 
-# Upgrades the PostgreSQL databases from 12 to 14
-upgradePostgreSQL12to14 () {
+# Upgrades the PostgreSQL databases
+# $1: The current version
+# $2: The new version
+upgradePostgreSQL() {
+	local fromVersion=${1}
+	local toVersion=${2}
+
 	bashio::log.notice "Upgrading databases now. This could take a while. Please be patient..."
 
 	# Move the old data directory out of our way..
-	mv ${postgres_data} ${postgres_data}12
+	mv ${postgres_data} ${postgres_data}${fromVersion}
 
 	# And upgrade PostgreSQL
-	bashio::log.notice "Upgrading PostgreSql..."
+	bashio::log.notice "Upgrading PostgreSql from ${fromVersion} to ${toVersion}"
 
 	# Backup old HBA.conf and create a temp one...
-	mv ${postgres_data}12/pg_hba.conf ${postgres_data}12/pg_hba_backup.conf
-	echo "local    all             all                                     trust" > ${postgres_data}12/pg_hba.conf
+	mv ${postgres_data}${fromVersion}/pg_hba.conf ${postgres_data}${fromVersion}/pg_hba_backup.conf
+	echo "local    all             all                                     trust" > ${postgres_data}${fromVersion}/pg_hba.conf
 
 	#Start postgres on the old data-dir
-	bashio::log.info "Starting PostgreSQL-12 first.."
-	su - postgres -c "/usr/libexec/postgresql12/postgres -D ${postgres_data}12" &
+	bashio::log.info "Starting PostgreSQL-${fromVersion} first.."
+	su - postgres -c "/usr/libexec/postgresql${fromVersion}/postgres -D ${postgres_data}${fromVersion}" &
 	postgres_pid=$!
 
 	# Wait for postgres to become available..
@@ -94,24 +100,24 @@ upgradePostgreSQL12to14 () {
 	wait ${postgres_pid} || true
 
 	# Restore HBA.CONF
-	rm ${postgres_data}12/pg_hba.conf
-	mv ${postgres_data}12/pg_hba_backup.conf ${postgres_data}12/pg_hba.conf
+	rm ${postgres_data}${fromVersion}/pg_hba.conf
+	mv ${postgres_data}${fromVersion}/pg_hba_backup.conf ${postgres_data}${fromVersion}/pg_hba.conf
 
 	# Create a fresh data-directory
 	initializeDataDirectory
 
 	# And upgrade!
 	bashio::log.notice "Upgrading databases.."
-	cd ${postgres_data}12
-	if su -c "pg_upgrade --old-bindir=/usr/libexec/postgresql12 --new-bindir=/usr/libexec/postgresql14 --old-datadir=${postgres_data}12 --new-datadir=${postgres_data} --link --username=postgres" -s /bin/sh postgres; then
+	cd ${postgres_data}${fromVersion}
+	if su -c "pg_upgrade --old-bindir=/usr/libexec/postgresql${fromVersion} --new-bindir=/usr/libexec/postgresql${toVersion} --old-datadir=${postgres_data}${fromVersion} --new-datadir=${postgres_data} --link --username=postgres" -s /bin/sh postgres; then
 		bashio::log.notice "PostgreSQL upgraded succesfully!"
 		# Remove the old cluster...
-		rm -r ${postgres_data}12
+		rm -r ${postgres_data}${fromVersion}
 		return 0
 	else
 		# Rollback..
 		rm -r ${postgres_data}
-		mv ${postgres_data}12 ${postgres_data}
+		mv ${postgres_data}${fromVersion} ${postgres_data}
 
 		bashio::log.error "PostgreSQL could not upgrade! Please inspect any errors in the lines above!"
 		return 1
@@ -136,33 +142,32 @@ else
 
 	# Check if we need to restore again.
 	if $(bashio::config.true 'retry_upgrade'); then
-		if bashio::fs.directory_exists "${postgres_data}12"; then
-			bashio::log.notice "An aborted upgrade from Postgres 12 was detected. Restoring.."
+		if bashio::fs.directory_exists "${postgres_data}14"; then
+			bashio::log.notice "An aborted upgrade from Postgres 14 was detected. Restoring.."
 			rm -r ${postgres_data}
-			mv ${postgres_data}12 ${postgres_data}
+			mv ${postgres_data}14 ${postgres_data}
 		else
 			bashio::config.suggest.false 'retry_upgrade' 'This option is only for temporary reasons: to recover from a failed upgrade.'
 		fi
 	fi
 
-	# # Check if an aborted upgrade is present.. (not working.. some users already upgraded..)
-	# if bashio::fs.directory_exists "${postgres_data}12"; then
-	# 	bashio::log.notice "An aborted upgrade from 12 to 14 was detected. Retrying..."
-	# 	mv ${postgres_data} ${postgres_data}_backup_2_0_1 || true
-	# 	mv ${postgres_data}12 ${postgres_data} || true
-	# fi
-
-	# Check if we need to upgrade from 12 to 14.
+	# Check if we need to upgrade from 12 to 15
 	if [[ $(< ${postgres_data}/PG_VERSION) == "12" ]]; then
 		bashio::log.notice "A database upgrade is required from Postgres 12."
-		if upgradePostgreSQL12to14; then
+		bashio::log.error "Upgrade was not succesful. This addon version does no longer support Postgres 12. Please upgrade to the previous version and upgrade to Postgres 14 first." 
+		exit 1
+	fi
+
+	# Check if we need to upgrade from 14 to 15
+	if [[ $(< ${postgres_data}/PG_VERSION) == "14" ]]; then
+		bashio::log.notice "A database upgrade is required from Postgres 14."
+		if upgradePostgreSQL 14 15 then
 			bashio::log.notice "Upgrade was succesful"
 		else
 			bashio::log.error "Upgrade was not succesful."
 			exit 1
 		fi
 	fi
-
 fi
 
 bashio::log.info "done"
@@ -183,15 +188,6 @@ bashio::log.info "done"
 # Appy max connections
 bashio::log.info "Applying max connections.."
 sed -i -e "/max_connections =/ s/= .*/= $(bashio::config 'max_connections')/" ${postgres_data}/postgresql.conf
-bashio::log.info "done"
-
-# Apply stats temp directory (REMOVE FOR PostGRES 15! It's deprecated there!) https://pgpedia.info/s/stats_temp_directory.html
-#STATS_TEMP_DIRECTORY=${postgres_data%%+(/)}/timescaledb-addon/pg_stat
-STATS_TEMP_DIRECTORY=/tmp/pg_stat_tmp/
-bashio::log.info "Applying stats_temp_directory: ${STATS_TEMP_DIRECTORY}"
-mkdir -p ${STATS_TEMP_DIRECTORY}
-chown -R postgres:postgres ${STATS_TEMP_DIRECTORY}
-sed -i -E "s~[#]?(stats_temp_directory)\s*=.*~\1 = '$STATS_TEMP_DIRECTORY'~" ${postgres_data}/postgresql.conf
 bashio::log.info "done"
 
 # Remount tmpfs to allow executables from pgAgent

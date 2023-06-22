@@ -1,9 +1,9 @@
 build_from: 
-  aarch64: ghcr.io/hassio-addons/base/aarch64:13.1.1
-  amd64: ghcr.io/hassio-addons/base/amd64:13.1.1
-  armhf: ghcr.io/hassio-addons/base/armhf:13.1.1
-  armv7: ghcr.io/hassio-addons/base/armv7:13.1.1
-  i386: ghcr.io/hassio-addons/base/i386:13.1.1
+  aarch64: ghcr.io/hassio-addons/base/aarch64:14.0.2
+  amd64: ghcr.io/hassio-addons/base/amd64:14.0.2
+  armhf: ghcr.io/hassio-addons/base/armhf:14.0.2
+  armv7: ghcr.io/hassio-addons/base/armv7:14.0.2
+  i386: ghcr.io/hassio-addons/base/i386:14.0.2
 squash: false
 args:
   CAS_VERSION: "1.0.1"
