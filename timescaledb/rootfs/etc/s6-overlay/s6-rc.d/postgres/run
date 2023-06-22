@@ -28,7 +28,7 @@ while ! psql -U "postgres" postgres -c "" 2> /dev/null; do
 	sleep 1
 done
 
-# Create extensions timescaledb in initial databases
+# Setup postgres user on first run
 if [[ -f "/data/firstrun" ]]; then
 	bashio::log.info "Setting up postgres user.."
 	psql -U "postgres" postgres -c "ALTER USER postgres WITH PASSWORD 'homeassistant';"

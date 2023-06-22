@@ -8,7 +8,7 @@ docker build --platform linux/aarch64 --tag husselhans/hassos-addon-timescaledb-
 The dockerfile already contains the default build architecture and the default base image:
 
 ```
-ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:13.1.1
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:14.0.2
 ARG BUILD_ARCH=aarch64
 ```
 
@@ -37,7 +37,6 @@ docker image push husselhans/hassos-addon-timescaledb-aarch64:dev
 
 ## Pull latest DEV image into your raspoberry pi
 
-
 SSH  to a home assistant: `ssh -i hassos -l root -p 22222 10.50.1.104`
 From a system SSH (port 22222):
 
@@ -51,4 +50,10 @@ From a system SSH (port 22222), run the docker container with data attached:
 
 ```
 docker run -it --entrypoint "/bin/sh" -v /mnt/data/supervisor/addons/data/local_timescaledb/:/data:rw  husselhans/hassos-addon-timescaledb-aarch64:dev
+```
+
+## For simple DEV inspection, run the container with a shell
+
+```
+docker run -it --entrypoint "/bin/sh" husselhans/hassos-addon-timescaledb-aarch64:dev
 ```
