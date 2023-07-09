@@ -10,7 +10,6 @@ declare new_install
 postgres_data=/data/postgres
 version_file=/data/version
 new_install=false;
-minVersion
 
 # Applies permission to the data directory for the postgres user
 applyPermissions () {
@@ -27,6 +26,7 @@ initializeDataDirectory () {
 	su - postgres -c "initdb -D ${postgres_data}"
 	# Set timescaledb as being enabled in the postgres config file.
 	sed -r -i "s/[#]*\s*(shared_preload_libraries)\s*=\s*'(.*)'/\1 = 'timescaledb,\2'/;s/,'/'/" ${postgres_data}/postgresql.conf
+	
 	# Set Password protect IPv4 hosts by default
 	echo "host    all             all             0.0.0.0/0               md5" >> ${postgres_data}/pg_hba.conf
 	echo "local    all             all                                    md5" >> ${postgres_data}/pg_hba.conf
@@ -35,6 +35,7 @@ initializeDataDirectory () {
 	sed -r -i "s/[#]listen_addresses.=.'.*'/listen_addresses\ \=\ \'\*\'/g" ${postgres_data}/postgresql.conf
 	# Set telemetry level
 	echo "timescaledb.telemetry_level=$(bashio::config 'timescaledb.telemetry')" >> ${postgres_data}/postgresql.conf
+	echo "timescaledb.license_key='CommunityLicense'" >> ${postgres_data}/postgresql.conf
 	bashio::log.info "done"
 }
 
@@ -49,7 +50,7 @@ upgradeTimeScaleExtension () {
 		-X \
 		-U "postgres" \
 		-c "select datname from pg_database where datallowconn = true;" \
-		--set ON_ERROR_STOP=on \
+		--set ON_ERROR_STOP=off \
 		--no-align \
 		-t \
 		--field-separator ' ' \
@@ -115,6 +116,9 @@ upgradePostgreSQL() {
 		rm -r ${postgres_data}${fromVersion}
 		return 0
 	else
+		# copy logs
+		cp -r /data/postgres/pg_upgrade_output.d  ${postgres_data}${fromVersion} || true
+
 		# Rollback..
 		rm -r ${postgres_data}
 		mv ${postgres_data}${fromVersion} ${postgres_data}
@@ -123,6 +127,12 @@ upgradePostgreSQL() {
 		return 1
 	fi
 }
+
+
+# Prepare /tmp/pg_stat_tmp directory
+mkdir -p /tmp/pg_stat_tmp
+chown postgres:postgres /tmp/pg_stat_tmp
+
 
 if ! bashio::fs.directory_exists "${postgres_data}"; then
     bashio::log.info "Detected a fresh installation! Welcome! We're setting things up for you.."
@@ -154,14 +164,14 @@ else
 	# Check if we need to upgrade from 12 to 15
 	if [[ $(< ${postgres_data}/PG_VERSION) == "12" ]]; then
 		bashio::log.notice "A database upgrade is required from Postgres 12."
-		bashio::log.error "Upgrade was not succesful. This addon version does no longer support Postgres 12. Please upgrade to the previous version and upgrade to Postgres 14 first." 
+		bashio::log.error "Upgrade was not succesful. This addon version does no longer support Postgres 12. Please upgrade to the previous version of the addon and upgrade to Postgres 14 first." 
 		exit 1
 	fi
 
 	# Check if we need to upgrade from 14 to 15
 	if [[ $(< ${postgres_data}/PG_VERSION) == "14" ]]; then
 		bashio::log.notice "A database upgrade is required from Postgres 14."
-		if upgradePostgreSQL 14 15 then
+		if upgradePostgreSQL 14 15; then
 			bashio::log.notice "Upgrade was succesful"
 		else
 			bashio::log.error "Upgrade was not succesful."
@@ -188,9 +198,4 @@ bashio::log.info "done"
 # Appy max connections
 bashio::log.info "Applying max connections.."
 sed -i -e "/max_connections =/ s/= .*/= $(bashio::config 'max_connections')/" ${postgres_data}/postgresql.conf
-bashio::log.info "done"
-
-# Remount tmpfs to allow executables from pgAgent
-bashio::log.info "Remounting /tmp to allow pgAgent to execute scripts.."
-mount -o remount,exec /tmp
 bashio::log.info "done"

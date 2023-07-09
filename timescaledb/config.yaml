@@ -7,15 +7,18 @@ url: https://github.com/Expaso/hassos-addon-timescaledb
 arch:
   - aarch64
   - amd64
+  - armv7
+  - armhf
+  - i386
 codenotary: hans@expaso.nl
 startup: system
 boot: auto
 init: false
+tmpfs: true
 map:
   - share:rw
   - backup:rw
 timeout: 60
-tmpfs: true
 ports:
   5432/tcp:
 ports_description:

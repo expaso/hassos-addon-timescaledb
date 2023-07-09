@@ -3,12 +3,17 @@ ARG BUILD_ARCH=aarch64
 ARG GO_VERSION=1.19.0
 
 ###########################################
-# Base Image
+# Define base Image
 ###########################################
 FROM $BUILD_FROM as addon-base
 
+####################################
+# Previous Addon Image
+####################################
+FROM husselhans/hassos-addon-timescaledb-${BUILD_ARCH}:2.1.1 as previous-addon
+
 ###########################################
-# Build TimeScaleDB tools binaries in separate image
+# Build TimeScaleDB-tools
 ###########################################
 FROM golang:${GO_VERSION}-alpine AS timescaledb-tools
 
@@ -19,7 +24,6 @@ RUN apk update && apk add --no-cache git \
     && go install github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy@latest \
     && go install github.com/timescale/timescaledb-backup/cmd/ts-dump@latest \
     && go install github.com/timescale/timescaledb-backup/cmd/ts-restore@latest
-
 
 ###########################################
 # Final Image
@@ -44,23 +48,51 @@ RUN apk add --no-cache \
     postgresql14-contrib-jit \
     postgresql14-contrib
 
-# Add old postgis and timescaledb for postgresql 14 by downloading it, and installing it manually.
-# The reason is, otherwise these packagefiles would be overwritten by the newer versions in Postgresql 15.
+
+# Make sure pg_config follows the most current version
+RUN rm /usr/bin/pg_config \
+    && ln -s /usr/libexec/postgresql/pg_config /usr/bin/pg_config
+
+
+# --------------------------------------
+# TimescaleDB for PostgreSQl 14 - Build and install
+# --------------------------------------
+# Enable this if you only want the OSS parts
+#ENV OSS_ONLY -DAPACHE_ONLY=1
+ARG TIMESCALEDB_VERSION=2.11.1
 RUN set -ex \
-    && mkdir /download \
-    && cd /download \
-    && wget http://dl-cdn.alpinelinux.org/alpine/v3.16/community/${BUILD_ARCH}/postgresql-timescaledb-2.6.1-r1.apk \
-    && wget http://dl-cdn.alpinelinux.org/alpine/v3.16/community/${BUILD_ARCH}/postgis-3.2.2-r0.apk \
-    && wget http://dl-cdn.alpinelinux.org/alpine/v3.16/main/${BUILD_ARCH}/poppler-22.05.0-r0.apk \
-    && mkdir ./timescale && tar -xv -f postgresql-timescaledb-2.6.1-r1.apk -C ./timescale \
-    && cp -r ./timescale/* / \
-    && mkdir ./postgis && tar -xv -f postgis-3.2.2-r0.apk -C ./postgis \
-    && cp -r ./postgis/* / \
-    && mkdir ./poppler && tar -xv -f poppler-22.05.0-r0.apk -C ./poppler \
-    && cp -r ./poppler/* / \
-    && cd .. \
-    && rm -rf /download
-    
+    && apk add --no-cache --virtual .fetch-deps \
+                ca-certificates \
+                git \
+                openssl \
+                openssl-dev \
+                tar \
+    && mkdir -p /build/ \
+    && git clone https://github.com/timescale/timescaledb /build/timescaledb \
+    \
+    && apk add --no-cache -u musl \
+    && apk add --no-cache --virtual .build-deps \
+                coreutils \
+                dpkg-dev dpkg \
+                gcc \
+                krb5-dev \
+                libc-dev \
+                make \
+                cmake \
+                util-linux-dev \
+    \
+    # Build current version
+    && cd /build/timescaledb && rm -fr build \
+    && git checkout ${TIMESCALEDB_VERSION} \
+    && ./bootstrap -DCMAKE_BUILD_TYPE=RelWithDebInfo -DREGRESS_CHECKS=OFF -DTAP_CHECKS=OFF -DGENERATE_DOWNGRADE_SCRIPT=ON -DWARNINGS_AS_ERRORS=OFF -DPROJECT_INSTALL_METHOD="docker"${OSS_ONLY} \
+    # BUGFIX Line below is used to fix the error that <postgres.h> cannot be found, even though we have the postgres-dev package installed.
+    && export C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/include/postgresql/14/server \
+    && cd build && make install \
+    && cd ~ \
+    \
+    && if [ "${OSS_ONLY}" != "" ]; then rm -f $(pg_config --pkglibdir)/timescaledb-tsl-*.so; fi \
+    && rm -rf /build 
+
 # -----------------------------------------
 # PostgreSql 15
 # -----------------------------------------
@@ -73,14 +105,24 @@ RUN apk add --no-cache \
     postgresql15-contrib-jit \
     postgresql15-contrib
 
+
+# Set default postgresql version
+RUN rm /usr/libexec/postgresql \
+    && ln -s /usr/libexec/postgresql15 /usr/libexec/postgresql \
+    && rm /usr/share/postgresql \
+    && ln -s /usr/share/postgresql15 /usr/share/postgresql
+
 # Add JIT support
 RUN apk add --no-cache \
 	-u llvm14-libs
 
 # Add LatestTimescaleDB and Postgis
 RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/ \
-    postgresql-timescaledb=2.11.0-r0 \
-    postgis=3.3.3-r0
+        postgis=3.3.3-r1 \
+        gdal-driver-PostGISRaster \
+    && \
+    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/main/ \
+        libturbojpeg
 
 # Create it's run directory
 RUN mkdir -p /run/postgresql \
@@ -88,11 +130,46 @@ RUN mkdir -p /run/postgresql \
     && mkdir -p /run/postgresql/extensions \
 	&& chown -R postgres:postgres /run/postgresql/extensions
 
-# Copy over the timescaledb-tools
-COPY --from=timescaledb-tools /go/bin/* /usr/local/bin/
+# --------------------------------------
+# TimescaleDB for PostgreSQl 15 - Build and install
+# --------------------------------------
+# Enable this if you only want the OSS parts
+RUN set -ex \
+    && apk add --no-cache --virtual .fetch-deps \
+                ca-certificates \
+                git \
+                openssl \
+                openssl-dev \
+                tar \
+    && mkdir -p /build/ \
+    && git clone https://github.com/timescale/timescaledb /build/timescaledb \
+    \
+    && apk add --no-cache -u musl \
+    && apk add --no-cache --virtual .build-deps \
+                coreutils \
+                dpkg-dev dpkg \
+                gcc \
+                krb5-dev \
+                libc-dev \
+                make \
+                cmake \
+                util-linux-dev \
+    \
+    # Build current version
+    && cd /build/timescaledb && rm -fr build \
+    && git checkout ${TIMESCALEDB_VERSION} \
+    && ./bootstrap -DCMAKE_BUILD_TYPE=RelWithDebInfo -DREGRESS_CHECKS=OFF -DTAP_CHECKS=OFF -DGENERATE_DOWNGRADE_SCRIPT=ON -DWARNINGS_AS_ERRORS=OFF -DPROJECT_INSTALL_METHOD="docker"${OSS_ONLY} \
+    # BUGFIX Line below is used to fix the error that <postgres.h> cannot be found, even though we have the postgres-dev package installed.
+    && export C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/include/postgresql/15/server \
+    && cd build && make install \
+    && cd ~ \
+    \
+    && if [ "${OSS_ONLY}" != "" ]; then rm -f $(pg_config --pkglibdir)/timescaledb-tsl-*.so; fi \
+    && apk del .fetch-deps .build-deps \
+    && rm -rf /build 
 
 # --------------------------------------------
-# pgagent - build and install
+# pgAgent - build and install
 # --------------------------------------------
 RUN set -ex \
     && apk add --no-cache --virtual .fetch-deps \
@@ -131,52 +208,32 @@ RUN set -ex \
 # https://stackoverflow.com/questions/57749127/how-can-i-specify-the-glibc-version-in-cargo-build-for-rust
 # https://stackoverflow.com/questions/57749127/how-can-i-specify-the-glibc-version-in-cargo-build-for-rust
 
-
-####################################
-# Back to build final image
-####################################
 FROM addon
 
-# --------------------------------------
-# Bake in support for GLIBC (AARCH64 support??)
-# --------------------------------------
-
-# ENV \
-#     LANG=en_US.UTF-8 \
-#     LANGUAGE=en_US:en \
-#     LC_ALL=en_US.UTF-8
-
-# ENV \
-#     GLIBC_REPO=https://github.com/sgerrand/alpine-pkg-glibc \
-#     GLIBC_VERSION=2.35-r1
-
-# RUN set -ex && \
-#     apk --update add libstdc++ curl ca-certificates && \
-#     for pkg in glibc-${GLIBC_VERSION} glibc-bin-${GLIBC_VERSION}; \
-#         do curl -sSL ${GLIBC_REPO}/releases/download/${GLIBC_VERSION}/${pkg}.apk -o /tmp/${pkg}.apk; done && \
-#     apk add --allow-untrusted /tmp/*.apk && \
-#     rm -v /tmp/*.apk && \
-#     /usr/glibc-compat/sbin/ldconfig /lib /usr/glibc-compat/lib
-
 # Copy timescaledb-toolkit
-COPY --from=addon /usr/share/postgresql15 /usr/share/postgresql15
-COPY --from=addon /usr/lib/postgresql15 /usr/lib/postgresql15
+#COPY --from=addon /usr/share/postgresql15 /usr/share/postgresql15
+#COPY --from=addon /usr/lib/postgresql15 /usr/lib/postgresql15
 
-# --------------------------------------
-# Finish image
-# --------------------------------------
+# Copy timescaledb-tools
+COPY --from=timescaledb-tools /go/bin/* /usr/local/bin/
+
+# Copy the timescaledb and postgis extensions from the previous addon
+COPY --from=previous-addon /usr/lib/postgresql14/timescale* /usr/lib/postgresql14/
+COPY --from=previous-addon /usr/lib/postgresql14/postgis* /usr/lib/postgresql14/
+COPY --from=previous-addon /lib/libssl.so.1.1 /lib/
+COPY --from=previous-addon /lib/libcrypto.so.1.1 /lib/
 
 # Add nano for debugging
-RUN set -ex \
-    && apk add --no-cache \
-    nano
+# RUN set -ex \
+#     && apk add --no-cache \
+#     nano
 
 # Make sure that S6 is not so hard on our service startup/shutdown
 ENV \
     S6_SERVICES_GRACETIME=50000 \
     S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
 
-# Copy data
+# Copy root fs files
 COPY rootfs /
 
 WORKDIR /

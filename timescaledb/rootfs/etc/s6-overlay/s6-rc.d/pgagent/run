@@ -36,6 +36,10 @@ if ! (psql -X -U postgres -d "postgres" -c "select 1 from pg_extension where ext
 	psql -U "postgres" -d "postgres" -c "CREATE EXTENSION IF NOT EXISTS pgagent;" || true >> /var/log/pgagent.run.log
 fi;
 
+# Create a tmpfs for the pgagent log
+mkdir -p "/data/tmp/pgagent"
+export TMPDIR=/data/tmp/pgagent
+
 # And run the daemon in the foreground
 bashio::log.info "Starting PgAgent.."
 /usr/local/bin/pgagent hostaddr=127.0.0.1 dbname=postgres user=postgres -f
