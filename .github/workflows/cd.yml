@@ -16,7 +16,7 @@ jobs:
           # define variables      
           # set them as GitHub ENV variables
           echo "ADDON_NAME=$( cut -c21- <<< ${{ github.repository }} )" >> $GITHUB_ENV
-          echo "ADDON_VERSION=$( cut -c1- <<< ${{ github.event.release.tag_name }} )" >> $GITHUB_ENV        
+          echo "ADDON_VERSION=$( cut -c 2- <<< ${{ github.event.release.tag_name }} )" >> $GITHUB_ENV        
       - name: Build and push tagged Docker image
         run: |
           sed -i "s/dev/${{ env.ADDON_VERSION }}/g" timescaledb/config.yaml
@@ -30,7 +30,7 @@ jobs:
             --docker-password ${{ secrets.DOCKER_PASSWORD }}
 
   publish:
-    if: github.event.action == 'release'
+    if: github.event.action == 'release' && github.event.release.draft == false && github.event.release.prerelease == false
     name: Publish release
     runs-on: ubuntu-latest
     steps:
@@ -57,12 +57,22 @@ jobs:
         run: |
           mkdir -p repository/timescaledb
           cd repository
+
+          # Set git config
           git config --local user.email "hans@expaso.nl"
           git config --local user.name "Hans van Essen"
+
+          # Copy readme, config and images
           cp -v ../addon/README.md ../addon/timescaledb/config.yaml ../addon/timescaledb/*.png  timescaledb
           sed -i "s/dev/${{ env.ADDON_VERSION }}/g" timescaledb/config.yaml
           sed -i "s/imageaftercd/image/g" timescaledb/config.yaml
-          rm -f config.json
+
+          # Prepend release body to Changelog
+          echo -e "# ${{ env.ADDON_VERSION }}\n\n${{ github.event.release.body }}\n$(cat timescaledb/CHANGELOG.md)" > timescaledb/CHANGELOG.md
+
+          # Remove old files
+          rm -f timescaledb/config.json
+
           git add .
           # git commit -m "Upgrade ${{ env.ADDON_NAME }} to v${{ env.ADDON_VERSION }} -a
       - name: Create pull request
@@ -73,7 +83,10 @@ jobs:
           path: repository
           body: |
             This pull request is automatically generated.
-            Please review and merge if appropriate.
+            
+            Changes:
+
+             ${{ github.event.release.body }}
           base: master
           branch: ${{ env.ADDON_NAME }}-to-v${{ env.ADDON_VERSION }}
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }} # Personal Access Token with repo scope
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}

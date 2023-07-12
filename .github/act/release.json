@@ -1,9 +1,9 @@
 {
-    "action": "release",
+    "action": "created",
     "release": {
-        "body": "TestBody",
+        "body": "- 🐛 Fixed a bug\r\n- 🚀 Added New Feature",
         "draft": false,
-        "prerelease": true,
+        "prerelease": false,
         "tag_name": "v3.0.0"
     }
 }
