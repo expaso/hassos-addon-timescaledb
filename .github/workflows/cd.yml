@@ -47,17 +47,23 @@ jobs:
           ADDON_NAME=$( cut -c21- <<< ${{ github.repository }} )
           ADDON_VERSION=$( cut -c12- <<< ${{ github.ref }} )
           mkdir -p repository/timescaledb
-          cp -v addon/README.md addon/timescaledb/config.yaml addon/timescaledb/*.png  repository/timescaledb
           cd repository
-          sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.yaml
-          sed -i "s/imageaftercd/image/g" timescaledb/config.yaml
           git config --local user.email "hans@expaso.nl"
           git config --local user.name "Hans van Essen"
+          git checkout -b "Upgrade $ADDON_NAME v$ADDON_VERSION"
+          cp -v ../addon/README.md ../addon/timescaledb/config.yaml ../addon/timescaledb/*.png  timescaledb
+          sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.yaml
+          sed -i "s/imageaftercd/image/g" timescaledb/config.yaml
           git add .
           git commit -m "Upgrade $ADDON_NAME to v$ADDON_VERSION" -a
-      - name: Push changes
-        uses: ad-m/github-push-action@master
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v5
         with:
-          github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          directory: repository
-          repository: Expaso/hassos-addons
+          commit-message: Upgrade ${{ github.repository }} to v${{ github.ref }}
+          title: Upgrade ${{ github.repository }} to v${{ github.ref }}
+          body: |
+            This pull request is automatically generated.
+            Please review and merge if appropriate.
+          base: master
+          branch: ${{ github.repository }} v${{ github.ref }}
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }} # Personal Access Token with repo scope
