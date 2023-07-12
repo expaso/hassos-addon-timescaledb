@@ -1,0 +1,9 @@
+{
+    "action": "release",
+    "release": {
+        "body": "TestBody",
+        "draft": false,
+        "prerelease": true,
+        "tag_name": "v3.0.0"
+    }
+}

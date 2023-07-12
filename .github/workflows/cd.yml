@@ -1,32 +1,36 @@
 name: Continuous deployment
-
-on:
-  push:
-    # Sequence of patterns matched against refs/tags
-    tags: [v*]
+on: 
+  release:
 
 jobs:
-  # build:
-  #   name: Build image
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-  #     - name: Build and push tagged Docker image
-  #       run: |
-  #         ADDON_VERSION=$( cut -c12- <<< ${{ github.ref }} )
-  #         sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.yaml
-  #         sed -i "s/imageaftercd/image/g" timescaledb/config.yaml
-  #         docker run --rm --privileged \
-  #           -v ~/.docker:/root/.docker \
-  #           -v /var/run/docker.sock:/var/run/docker.sock \
-  #           -v "$(pwd)":/data homeassistant/amd64-builder \
-  #           --target timescaledb --all \
-  #           --docker-user ${{ secrets.DOCKER_USERNAME }} \
-  #           --docker-password ${{ secrets.DOCKER_PASSWORD }}
+  build:
+    if: github.event.action == 'created'
+    name: Build image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set and Retrieve Github ENV variables
+        shell: bash
+        run: |
+          # define variables      
+          # set them as GitHub ENV variables
+          echo "ADDON_NAME=$( cut -c21- <<< ${{ github.repository }} )" >> $GITHUB_ENV
+          echo "ADDON_VERSION=$( cut -c1- <<< ${{ github.event.release.tag_name }} )" >> $GITHUB_ENV        
+      - name: Build and push tagged Docker image
+        run: |
+          sed -i "s/dev/${{ env.ADDON_VERSION }}/g" timescaledb/config.yaml
+          sed -i "s/imageaftercd/image/g" timescaledb/config.yaml
+          docker run --rm --privileged \
+            -v ~/.docker:/root/.docker \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$(pwd)":/data homeassistant/amd64-builder \
+            --target timescaledb --all \
+            --docker-user ${{ secrets.DOCKER_USERNAME }} \
+            --docker-password ${{ secrets.DOCKER_PASSWORD }}
 
   publish:
-    #needs: build
+    if: github.event.action == 'release'
     name: Publish release
     runs-on: ubuntu-latest
     steps:
@@ -41,29 +45,35 @@ jobs:
           persist-credentials: false
           repository: Expaso/hassos-addons
           path: repository
+      - name: Set and Retrieve Github ENV variables
+        shell: bash
+        run: |
+          # define variables      
+          # set them as GitHub ENV variables
+          echo "ADDON_NAME=$( cut -c21- <<< ${{ github.repository }} )" >> $GITHUB_ENV
+          echo "ADDON_VERSION=$( cut -c 1- <<< ${{ github.event.release.tag_name }} )" >> $GITHUB_ENV
       - name: Create local changes and commit files
         continue-on-error: false
         run: |
-          ADDON_NAME=$( cut -c21- <<< ${{ github.repository }} )
-          ADDON_VERSION=$( cut -c12- <<< ${{ github.ref }} )
           mkdir -p repository/timescaledb
           cd repository
           git config --local user.email "hans@expaso.nl"
           git config --local user.name "Hans van Essen"
-          git checkout -b "Upgrade $ADDON_NAME v$ADDON_VERSION"
           cp -v ../addon/README.md ../addon/timescaledb/config.yaml ../addon/timescaledb/*.png  timescaledb
-          sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.yaml
+          sed -i "s/dev/${{ env.ADDON_VERSION }}/g" timescaledb/config.yaml
           sed -i "s/imageaftercd/image/g" timescaledb/config.yaml
+          rm -f config.json
           git add .
-          # git commit -m "Upgrade $ADDON_NAME to v$ADDON_VERSION" -a
+          # git commit -m "Upgrade ${{ env.ADDON_NAME }} to v${{ env.ADDON_VERSION }} -a
       - name: Create pull request
         uses: peter-evans/create-pull-request@v5
         with:
-          commit-message: Upgrade ${{ github.repository }} to v${{ github.ref }}
-          title: Upgrade-${{ github.repository }}-to-v${{ github.ref }}
+          commit-message: Upgrade ${{ env.ADDON_NAME }} to v${{ env.ADDON_VERSION }}
+          title: Publish ${{ env.ADDON_NAME }} v${{ env.ADDON_VERSION }}
+          path: repository
           body: |
             This pull request is automatically generated.
             Please review and merge if appropriate.
           base: master
-          branch: ${{ github.repository }}-v${{ github.ref }}
+          branch: ${{ env.ADDON_NAME }}-to-v${{ env.ADDON_VERSION }}
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }} # Personal Access Token with repo scope
