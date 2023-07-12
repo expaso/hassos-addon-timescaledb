@@ -29,7 +29,7 @@ To use it with codenotary CAS signing:
 docker run --rm --privileged --env CAS_API_KEY=$CAS_API_KEY -v ~/.docker:/root/.docker -v /var/run/docker.sock:/var/run/docker.sock:ro -v ~/hassos-addon-timescaledb/timescaledb:/data homeassistant/amd64-builder --target timescaledb --aarch64 -t /data
 ```
 
-This will use the base images from the `build.json` file, and the architecture specified. Use `--all` instead of `--aarch64`  to build all architectures within the `config.json`for example.
+This will use the base images from the `build.yaml` file, and the architecture specified. Use `--all` instead of `--aarch64`  to build all architectures within the `config.yaml`for example.
 
 ## Push latest DEV image to repository
 

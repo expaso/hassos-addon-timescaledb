@@ -142,10 +142,10 @@ Example: ['sed -i -e "/max_connections =/ s/= .*/= 50/" /data/postgres/postgresq
 ### Option: `retry_upgrade`
 
 Advanced users only!
-When set, the upgrade from Postgres 12 to 14 could be retryed if it failed mid-flight. 
+When set, the upgrade from Postgres 14 to 15 could be retryed if it failed mid-flight. 
 Basically this will try to find the old database-files from Postgres 12, and restore them before trying to upgrade to Postgres 14 again.
 
-!! Please don't set this if you don't know what you are doing !!
+!! Please don't set this if you don't know what you are doing or before taking a backup. !!
 
 ## Usage
 

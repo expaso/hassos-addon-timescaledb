@@ -4,27 +4,9 @@ on:
   push:
     # Sequence of patterns matched against refs/heads
     branches: [master]
-
 jobs:
-  # lint:
-  #   name: Lint code
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-  #     - name: Use Node.js
-  #       uses: actions/setup-node@v1
-  #       with:
-  #         node-version: "12.x"
-  #     - name: Install ESLint and dependencies
-  #       run: yarn install
-  #       working-directory: ./filiibot/rootfs/opt/filiibot
-  #     - name: Run ESLint
-  #       run: node_modules/eslint/bin/eslint.js bot.js
-  #       working-directory: ./filiibot/rootfs/opt/filiibot
 
   test:
-#    needs: lint
     name: Test code
     runs-on: ubuntu-latest
     steps:
