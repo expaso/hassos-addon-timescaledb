@@ -51,7 +51,7 @@ jobs:
           # define variables      
           # set them as GitHub ENV variables
           echo "ADDON_NAME=$( cut -c21- <<< ${{ github.repository }} )" >> $GITHUB_ENV
-          echo "ADDON_VERSION=$( cut -c 1- <<< ${{ github.event.release.tag_name }} )" >> $GITHUB_ENV
+          echo "ADDON_VERSION=$( cut -c 2- <<< ${{ github.event.release.tag_name }} )" >> $GITHUB_ENV
       - name: Create local changes and commit files
         continue-on-error: false
         run: |
