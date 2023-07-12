@@ -33,7 +33,7 @@ jobs:
             --docker-password ${{ secrets.DOCKER_PASSWORD }}
 
   publish:
-    if: github.event.action == 'release' && github.event.release.draft == false && github.event.release.prerelease == false
+    if: github.event.action == 'released' && github.event.release.draft == false && github.event.release.prerelease == false
     name: Publish release
     runs-on: ubuntu-latest
     steps:
