@@ -30,7 +30,7 @@ options:
     telemetry: basic
     maxmemory: 512MB
     maxcpus: 4
-  max_connections: 20
+  max_connections: 50
   system_packages: []
   init_commands: []
   retry_upgrade: false

@@ -6,27 +6,27 @@ on:
     tags: [v*]
 
 jobs:
-  build:
-    name: Build image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Build and push tagged Docker image
-        run: |
-          ADDON_VERSION=$( cut -c12- <<< ${{ github.ref }} )
-          sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.yaml
-          sed -i "s/imageaftercd/image/g" timescaledb/config.yaml
-          docker run --rm --privileged \
-            -v ~/.docker:/root/.docker \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v "$(pwd)":/data homeassistant/amd64-builder \
-            --target timescaledb --all \
-            --docker-user ${{ secrets.DOCKER_USERNAME }} \
-            --docker-password ${{ secrets.DOCKER_PASSWORD }}
+  # build:
+  #   name: Build image
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+  #     - name: Build and push tagged Docker image
+  #       run: |
+  #         ADDON_VERSION=$( cut -c12- <<< ${{ github.ref }} )
+  #         sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.yaml
+  #         sed -i "s/imageaftercd/image/g" timescaledb/config.yaml
+  #         docker run --rm --privileged \
+  #           -v ~/.docker:/root/.docker \
+  #           -v /var/run/docker.sock:/var/run/docker.sock \
+  #           -v "$(pwd)":/data homeassistant/amd64-builder \
+  #           --target timescaledb --all \
+  #           --docker-user ${{ secrets.DOCKER_USERNAME }} \
+  #           --docker-password ${{ secrets.DOCKER_PASSWORD }}
 
   publish:
-    needs: build
+    #needs: build
     name: Publish release
     runs-on: ubuntu-latest
     steps:
@@ -55,15 +55,15 @@ jobs:
           sed -i "s/dev/$ADDON_VERSION/g" timescaledb/config.yaml
           sed -i "s/imageaftercd/image/g" timescaledb/config.yaml
           git add .
-          git commit -m "Upgrade $ADDON_NAME to v$ADDON_VERSION" -a
+          # git commit -m "Upgrade $ADDON_NAME to v$ADDON_VERSION" -a
       - name: Create pull request
         uses: peter-evans/create-pull-request@v5
         with:
           commit-message: Upgrade ${{ github.repository }} to v${{ github.ref }}
-          title: Upgrade ${{ github.repository }} to v${{ github.ref }}
+          title: Upgrade-${{ github.repository }}-to-v${{ github.ref }}
           body: |
             This pull request is automatically generated.
             Please review and merge if appropriate.
           base: master
-          branch: ${{ github.repository }} v${{ github.ref }}
+          branch: ${{ github.repository }}-v${{ github.ref }}
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }} # Personal Access Token with repo scope
