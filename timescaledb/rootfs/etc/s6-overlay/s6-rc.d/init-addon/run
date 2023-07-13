@@ -57,8 +57,17 @@ upgradeTimeScaleExtension () {
 		--quiet \
 	| while read datname; do
 		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'timescaledb';" | grep -q 1 \
-		&& (bashio::log.info "Try updating Timescale Extension for database: '${datname}'.."; \
-		(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb UPDATE;" || true))
+		&& (
+			bashio::log.info "Try updating Timescale Extension for database: '${datname}'.."; \
+			# Drop the old functions and views, these could be incompatible with the new version.
+			# See: https://github.com/timescale/timescaledb-extras/issues/34
+			# Please note that we do not drop the extension itself, because that would drop the hypertables as well.
+			# The views and functions could be recreated from: https://github.com/timescale/timescaledb-extras
+			psql -U "postgres" homeassistant -c "drop function if exists public.get_dimension_details(regclass)"; \
+			psql -U "postgres" homeassistant -c "drop view if exists public.chunks_tstz"; \
+			psql -U "postgres" homeassistant -c "drop view if exists public.chunks_ts"; \
+			(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb UPDATE;" || true)
+		)
 	done
 
 	bashio::log.info "done"
@@ -77,7 +86,7 @@ upgradePostgreSQL() {
 	mv ${postgres_data} ${postgres_data}${fromVersion}
 
 	# And upgrade PostgreSQL
-	bashio::log.notice "Upgrading PostgreSql from ${fromVersion} to ${toVersion}"
+	bashio::log.notice "Upgrading PostgreSql from ${fromVersion} to ${toVersion}.."
 
 	# Backup old HBA.conf and create a temp one...
 	mv ${postgres_data}${fromVersion}/pg_hba.conf ${postgres_data}${fromVersion}/pg_hba_backup.conf
@@ -97,8 +106,10 @@ upgradePostgreSQL() {
 	upgradeTimeScaleExtension
 
 	# Stop server
+	bashio::log.notice "Stopping PostgreSql ${fromVersion}.."
 	kill ${postgres_pid}
 	wait ${postgres_pid} || true
+	bashio::log.notice "done"
 
 	# Restore HBA.CONF
 	rm ${postgres_data}${fromVersion}/pg_hba.conf
