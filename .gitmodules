@@ -1,0 +1,3 @@
+[submodule "timescaledb/pgagent"]
+	path = timescaledb/pgagent
+	url = https://github.com/pgadmin-org/pgagent

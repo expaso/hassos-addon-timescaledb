@@ -1,0 +1,121 @@
+diff --git a/connection.cpp b/connection.cpp
+index 916d891..163e7f4 100644
+--- a/connection.cpp
++++ b/connection.cpp
+@@ -231,7 +231,7 @@ void DBconn::Return()
+ 
+ 	// Cleanup
+ 	ExecuteVoid("RESET ALL");
+-	m_lastError.empty();
++	bool _ = m_lastError.empty();
+ 	m_inUse = false;
+ 
+ 	LogMessage((
+@@ -307,6 +307,39 @@ void DBconn::ClearConnections(bool all)
+ 		LogMessage("No connections found!", LOG_DEBUG);
+ }
+ 
++bool DBconn::ValidateConnection()
++{
++	// Check Connection Status
++	ConnStatusType status = PQstatus(m_conn);
++	if (status == CONNECTION_OK) {
++		return true;
++	}
++
++	m_lastError = PQerrorMessage(m_conn);
++	LogMessage("Conenction was broken. Trying to recover:  " + m_lastError, LOG_WARNING);
++
++	// If not good, reset the connection
++	Reset();
++
++	// Check the status again
++	status = PQstatus(this->m_conn);
++	if (status != CONNECTION_OK) {
++		m_lastError = PQerrorMessage(m_conn);
++		LogMessage("Connection error:  " + m_lastError, LOG_ERROR);
++		return false;
++	}
++
++	return true;
++}
++
++void DBconn::Reset()
++{
++	if (m_conn)
++	{
++		PQreset(m_conn);
++	}
++}
++
+ 
+ DBresult *DBconn::Execute(const std::string &query)
+ {
+@@ -364,6 +397,12 @@ std::string DBconn::GetLastError()
+ 
+ DBresult::DBresult(DBconn *conn, const std::string &query)
+ {
++	if (!conn->ValidateConnection())
++	{
++		LogMessage("Connection error: " + conn->m_lastError, LOG_WARNING);
++		return;
++	}
++
+ 	m_currentRow = 0;
+ 	m_maxRows = 0;
+ 
+@@ -377,8 +416,12 @@ DBresult::DBresult(DBconn *conn, const std::string &query)
+ 			m_maxRows = PQntuples(m_result);
+ 		else if (rc != PGRES_COMMAND_OK)
+ 		{
++			// Log error
++			std::string errorStatus = PQresStatus((ExecStatusType) rc);
++			std::string errorResult = PQresultErrorMessage(m_result);
+ 			conn->m_lastError = PQerrorMessage(conn->m_conn);
+-			LogMessage("Query error: " + conn->m_lastError, LOG_WARNING);
++			LogMessage("pgAgent Query error: " + errorResult + " with status: " + errorStatus + " Connection Error: "  + conn->m_lastError, LOG_WARNING);
++
+ 			PQclear(m_result);
+ 			m_result = nullptr;
+ 		}
+diff --git a/include/connection.h b/include/connection.h
+index 70ea408..8db0645 100644
+--- a/include/connection.h
++++ b/include/connection.h
+@@ -57,6 +57,8 @@ public:
+ 	std::string        ExecuteScalar(const std::string &query);
+ 	int                ExecuteVoid(const std::string &query);
+ 	void               Return();
++	bool			   ValidateConnection();
++	void			   Reset();	// Reset the connection to the database
+ 
+ 	const std::string &DebugConnectionStr() const;
+ 
+diff --git a/job.cpp b/job.cpp
+index fbc823e..a25a797 100644
+--- a/job.cpp
++++ b/job.cpp
+@@ -391,6 +391,13 @@ int Job::Execute()
+ 		else
+ 			stepstatus = steps->GetString("jstonerror");
+ 
++		LogMessage("Setting job status to finished", LOG_DEBUG);
++
++		// Reset the connection to the database because
++		// we may have lost the connection during the batch run.
++		// This happens sometimes witrh the messase: could not receive data from server: Bad file descriptor
++		m_threadConn->Reset();
++
+ 		rc = m_threadConn->ExecuteVoid(
+ 			"UPDATE pgagent.pga_jobsteplog "
+ 			"   SET jslduration = now() - jslstart, "
+@@ -402,6 +409,9 @@ int Job::Execute()
+ 			m_status = "f";
+ 			return -1;
+ 		}
++
++		LogMessage("Moving to next step..", LOG_DEBUG);
++
+ 		steps->MoveNext();
+ 	}
+ 

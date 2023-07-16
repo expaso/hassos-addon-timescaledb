@@ -176,6 +176,9 @@ RUN set -ex \
 # --------------------------------------------
 # pgAgent - build and install
 # --------------------------------------------
+RUN mkdir -p /build
+COPY pgagent.patch /build/
+
 RUN set -ex \
     && apk add --no-cache --virtual .fetch-deps \
                 ca-certificates \
@@ -183,8 +186,6 @@ RUN set -ex \
                 openssl \
                 openssl-dev \
                 tar \
-    && mkdir -p /build/ \
-    && git clone https://github.com/postgres/pgagent /build/pgagent \
     && apk add --no-cache -u musl \
     && apk add --no-cache --virtual .build-deps \
                 coreutils \
@@ -194,8 +195,10 @@ RUN set -ex \
 				build-base \
 				boost-dev \
 				openldap-dev \
+    && git clone https://github.com/postgres/pgagent /build/pgagent \
     && cd /build/pgagent \
     && git checkout ${pgagent_version} \
+    && git apply -v ../pgagent.patch \
     && cmake . \
     && make && make install \
     && cd ~ \
