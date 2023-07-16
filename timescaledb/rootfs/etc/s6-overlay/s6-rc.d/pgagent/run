@@ -42,4 +42,4 @@ export TMPDIR=/data/tmp/pgagent
 
 # And run the daemon in the foreground
 bashio::log.info "Starting PgAgent.."
-/usr/local/bin/pgagent hostaddr=127.0.0.1 dbname=postgres user=postgres -f -s /var/log/pgagent
+/usr/local/bin/pgagent hostaddr=127.0.0.1 dbname=postgres user=postgres -f -l 1 #-s /var/log/pgagent
