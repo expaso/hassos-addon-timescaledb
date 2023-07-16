@@ -7,6 +7,11 @@ ARG GO_VERSION=1.19.0
 ###########################################
 FROM $BUILD_FROM as addon-base
 
+RUN sed -i "s/libcrypto3=3.1.1-r1/libcrypto3=3.1.1-r2/g" /etc/apk/world \
+    && sed -i "s/libssl3=3.1.1-r1/libssl3=3.1.1-r2/g" /etc/apk/world \
+    && apk update \
+    && apk upgrade
+
 ####################################
 # Previous Addon Image
 ####################################
