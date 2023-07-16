@@ -4,10 +4,11 @@ on:
       types: 
         - released
         - created
+        - prereleased
 
 jobs:
   build:
-    if: github.event.action == 'created'
+    if: github.event.action == 'created' || github.event.action == 'prereleased'
     name: Build image
     runs-on: ubuntu-latest
     steps:
