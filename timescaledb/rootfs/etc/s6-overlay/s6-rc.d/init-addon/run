@@ -63,9 +63,9 @@ upgradeTimeScaleExtension () {
 			# See: https://github.com/timescale/timescaledb-extras/issues/34
 			# Please note that we do not drop the extension itself, because that would drop the hypertables as well.
 			# The views and functions could be recreated from: https://github.com/timescale/timescaledb-extras
-			psql -U "postgres" homeassistant -c "drop function if exists public.get_dimension_details(regclass)"; \
-			psql -U "postgres" homeassistant -c "drop view if exists public.chunks_tstz"; \
-			psql -U "postgres" homeassistant -c "drop view if exists public.chunks_ts"; \
+			#psql -U "postgres" homeassistant -c "drop function if exists public.get_dimension_details(regclass)"; \
+			#psql -U "postgres" homeassistant -c "drop view if exists public.chunks_tstz"; \
+			#psql -U "postgres" homeassistant -c "drop view if exists public.chunks_ts"; \
 			(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb UPDATE;" || true)
 		)
 	done
@@ -175,14 +175,21 @@ else
 	# Check if we need to upgrade from 12 to 15
 	if [[ $(< ${postgres_data}/PG_VERSION) == "12" ]]; then
 		bashio::log.notice "A database upgrade is required from Postgres 12."
-		bashio::log.error "Upgrade was not succesful. This addon version does no longer support Postgres 12. Please upgrade to the previous version of the addon and upgrade to Postgres 14 first." 
+		bashio::log.error "Upgrade was not succesfull. This addon version does no longer support Postgres 12. Please upgrade to the previous version of the addon and upgrade to Postgres 14 first." 
 		exit 1
 	fi
 
 	# Check if we need to upgrade from 14 to 15
 	if [[ $(< ${postgres_data}/PG_VERSION) == "14" ]]; then
 		bashio::log.notice "A database upgrade is required from Postgres 14."
-		if upgradePostgreSQL 14 15; then
+		bashio::log.error "Upgrade was not succesfull. This addon version does no longer support Postgres 12. Please upgrade to the previous version of the addon and upgrade to Postgres 14 first." 
+		exit 1
+	fi
+
+	# Check if we need to upgrade from 15 to 16
+	if [[ $(< ${postgres_data}/PG_VERSION) == "15" ]]; then
+		bashio::log.notice "A database upgrade is required from Postgres 15."
+		if upgradePostgreSQL 15 16; then
 			bashio::log.notice "Upgrade was succesful"
 		else
 			bashio::log.error "Upgrade was not succesful."

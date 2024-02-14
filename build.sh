@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # The following section is a helper function that prints the given message in a given color given a foreground color and an optional background color
 # Usage: printInColor "message" "color" "background color"
 # Example: printInColor "Hello World" "red" "blue"
@@ -37,9 +36,32 @@ printInColor "Building docker image.."
 
 # Build the image conform the instructions
 # Push the dev image to docker hub
-docker build --platform linux/aarch64 --tag husselhans/hassos-addon-timescaledb-aarch64:dev ./timescaledb \
-&& docker image push husselhans/hassos-addon-timescaledb-aarch64:dev \
-&& printInColor "Done building docker image!" "green"
+# build the image
+docker buildx build \
+    --push \
+    --platform linux/aarch64 \
+    --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb:cache \
+    --tag husselhans/hassos-addon-timescaledb-aarch64:dev \
+    --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:15.0.6 \
+    --progress plain \
+    ./timescaledb \
+    && printInColor "Done building docker image!" "green"
+
+#    --cache-to type=registry,ref=husselhans/hassos-addon-timescaledb:cache,mode=max \
+
+
+# docker buildx build \
+#     --push \
+#     --platform linux/aarch64 \
+#     --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb:cache \
+#     --cache-to type=registry,ref=husselhans/hassos-addon-timescaledb:cache,mode=max \
+#     --tag husselhans/hassos-addon-timescaledb-aarch64-dev \
+#     --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:15.0.5 \
+#     --progress plain \
+#     ./timescaledb \
+#     && docker image push husselhans/hassos-addon-timescaledb-aarch64:dev \
+#     && printInColor "Done building docker image!" "green"
+
 
 #Stop when an error occured
 if [ $? -ne 0 ]; then
@@ -49,12 +71,11 @@ fi
 
 # Run the docker image on hassos
 
-# Copy the docker image to hassos
-printInColor "Pulling docker image on hassos.." "yellow"
-# run the docker image pull command remote on Hassos
-ssh -i ~/.ssh/hassos -l root -p 22222 homeassistant "docker image pull husselhans/hassos-addon-timescaledb-aarch64:dev \
-    && ha addons stop  local_timescaledb  \
-    && ha addons start local_timescaledb"
-printInColor "Done pulling docker image on hassos!" "green"
-
+# # Copy the docker image to hassos
+# printInColor "Pulling docker image on hassos.." "yellow"
+# # run the docker image pull command remote on Hassos
+ ssh -i ~/.ssh/hassos -l root -p 22222 homeassistant "docker image pull husselhans/hassos-addon-timescaledb-aarch64:dev \
+     && ha addons stop  local_timescaledb  \
+     && ha addons start local_timescaledb"
+ printInColor "Done pulling docker image on hassos!" "green"
 

@@ -1,5 +1,5 @@
 # Home Assistant Add-on: [PostgreSQL](https://www.postgresql.org/) [TimescaleDB](https://www.timescale.com/)
-## [PostgreSql 15.3](https://www.postgresql.org/) & [Postgis 3.3.3](https://postgis.net/) & [TimescaleDB 2.11.1](https://www.timescale.com/) & [TimescaleDB Toolit 1.13.1](https://github.com/timescale/timescaledb-toolkit) & [pgAgent 4.2.2](https://www.pgadmin.org/docs/pgadmin4/development/pgagent.html)
+## [PostgreSql 15.3](https://www.postgresql.org/) & [Postgis 3.4.2](https://postgis.net/) & [TimescaleDB 2.14.1](https://www.timescale.com/) & [TimescaleDB Toolit 1.13.1](https://github.com/timescale/timescaledb-toolkit) & [pgAgent 4.2.2](https://www.pgadmin.org/docs/pgadmin4/development/pgagent.html)
 ## PostgreSQL Overview
 
 From: https://www.postgresql.org/about/
