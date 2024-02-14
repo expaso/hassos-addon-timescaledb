@@ -50,7 +50,6 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 RUN rm /usr/bin/pg_config \
     && ln -s /usr/libexec/postgresql/pg_config /usr/bin/pg_config
 
-
 # -----------------------------------------
 # PostgreSql 16 (NEW)
 # -----------------------------------------
@@ -63,16 +62,11 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
     postgresql16-contrib-jit \
     postgresql16-contrib
 
-
 # Set default postgresql version to 16
 RUN rm /usr/libexec/postgresql \
     && ln -s /usr/libexec/postgresql16 /usr/libexec/postgresql \
     && rm /usr/share/postgresql \
     && ln -s /usr/share/postgresql16 /usr/share/postgresql
-
-# Add JIT support
-#RUN apk add --no-cache \
-#	-u llvm14-libs
 
 # Add Latest Postgis
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
@@ -253,8 +247,8 @@ FROM timescale/timescaledb:2.14.1-pg16 as timescale-pg16
 FROM addon
 
 # Copy timescaledb-toolkit
-#COPY --from=addon /usr/share/postgresql15 /usr/share/postgresql15
-#COPY --from=addon /usr/lib/postgresql15 /usr/lib/postgresql15
+COPY --from=timescaledb-toolkit /usr/lib/postgresql16/timescaledb_toolkit* /usr/lib/postgresql16/
+COPY --from=timescaledb-toolkit /usr/share/postgresql/extension/timescaledb_toolkit* /usr/share/postgresql16/extension/
 
 # Copy timescaledb-tools
 COPY --from=timescaledb-tools /go/bin/* /usr/local/bin/
