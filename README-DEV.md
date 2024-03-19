@@ -57,3 +57,9 @@ docker run -it --entrypoint "/bin/sh" -v /mnt/data/supervisor/addons/data/local_
 ```
 docker run -it --entrypoint "/bin/sh" husselhans/hassos-addon-timescaledb-aarch64:dev
 ```
+
+## OR attach to a running container
+
+```
+docker exec -it addon_local_timescaledb bash
+```

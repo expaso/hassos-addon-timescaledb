@@ -42,7 +42,7 @@ docker buildx build \
     --platform linux/aarch64 \
     --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb:cache \
     --tag husselhans/hassos-addon-timescaledb-aarch64:dev \
-    --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:15.0.6 \
+    --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:15.0.7 \
     --progress plain \
     ./timescaledb \
     && printInColor "Done building docker image!" "green"
@@ -56,7 +56,7 @@ docker buildx build \
 #     --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb:cache \
 #     --cache-to type=registry,ref=husselhans/hassos-addon-timescaledb:cache,mode=max \
 #     --tag husselhans/hassos-addon-timescaledb-aarch64-dev \
-#     --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:15.0.5 \
+#     --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:15.0.7 \
 #     --progress plain \
 #     ./timescaledb \
 #     && docker image push husselhans/hassos-addon-timescaledb-aarch64:dev \

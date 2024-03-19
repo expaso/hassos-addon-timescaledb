@@ -1,4 +1,4 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:15.0.6
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:15.0.7
 ARG BUILD_ARCH=aarch64
 ARG GO_VERSION=1.19.0
 
@@ -180,6 +180,9 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
     && apk del .fetch-deps .build-deps .community-build-deps \
     && rm -rf /build 
 
+#Define timesaledb versions
+FROM timescale/timescaledb:2.14.1-pg15 as timescale-pg15
+FROM timescale/timescaledb:2.14.1-pg16 as timescale-pg16
 
 ###########################################
 # Timescaledb toolkit - Build and Install
@@ -193,12 +196,20 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 # --------------------------------------
 # Timescaledb toolkit - Build and Install
 # --------------------------------------
-FROM addon AS timescaledb-toolkit
-ENV ALPINE_VERSION 3.19
+FROM timescale-pg16 AS timescaledb-toolkit
 ENV TOOLKIT_VERSION 1.18.0
+
+# COPY rootfs /
+# RUN \
+#     set -ex \
+#     && cd /root \
+#     && apk add glibc-2.32-r0.apk --force \
+#     && apk add glibc-bin-2.32-r0.apk --force
+
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
     set -ex \
-    && apk add --virtual .fetch-deps \
+    && apk add \
                 ca-certificates \
                 git \
                 openssl \
@@ -206,22 +217,29 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
                 tar \
                 wget \
                 curl \
-    && apk add --virtual .build-deps \
+    && apk add \
                 coreutils \
                 gcc \
                 make \
                 cmake \
 		        build-base \
-                gcompat \
-    #&& apk add --virtual .community-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}/community/ \
-    && apk add --virtual .community-build-deps \
+    && apk add --repository http://dl-cdn.alpinelinux.org/alpine/v3.19/main/ \
                 rust \
                 cargo \
     && export PATH="/root/.cargo/bin:${PATH}" \
-    && cargo install cargo-pgx --version '^0.2'\
+    && cargo install --version '=0.10.2' --force cargo-pgrx \
     && cargo install rustfmt
 
-RUN set -ex \
+# Add compatibility librarties for timescaledb toolkit
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
+    set -ex \
+    && apk add gcompat clang16-libclang
+
+RUN --mount=type=cache,id=pgrx-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.pgrx \
+    --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
+    set -ex \
+    && export PATH="/root/.cargo/bin:${PATH}" \
     && mkdir -p /build/ \
     # && chown postgres:postgres -R /build \
     # && chown postgres:postgres -R /usr/share/postgresql14 \
@@ -232,44 +250,47 @@ RUN set -ex \
         && cd extension \
         # initdb fails as root so generate the correct config ourselves
         # && cargo pgx init --pg16 /usr/lib/postgresql/14/bin/pg_config        
-        && mkdir -p /root/.pgx \
-        && printf '[configs]\npg14="/usr/libexec/postgresql16/pg_config"\n' > /root/.pgx/config.toml \
-        && cargo pgx install --release --pg_config /usr/libexec/postgresql16/pg_config \
-        && cargo run --manifest-path ../tools/post-install/Cargo.toml -- /usr/libexec/postgresql16/pg_config \
+        && mkdir -p /root/.pgrx \
+        && printf '[configs]\npg16="/usr/local/bin/pg_config"\n' > /root/.pgrx/config.toml \
+        && cargo pgrx install --release \
+        && cargo run --manifest-path ../tools/post-install/Cargo.toml -- /usr/local/bin/pg_config \
     && cd ~ \
-    && apk del .fetch-deps .build-deps .community-build-deps \
     && rm -rf /build
 
-#Define timesaledb versions
-FROM timescale/timescaledb:2.14.1-pg15 as timescale-pg15
-FROM timescale/timescaledb:2.14.1-pg16 as timescale-pg16
-
 FROM addon
-
-# Copy timescaledb-toolkit
-COPY --from=timescaledb-toolkit /usr/lib/postgresql16/timescaledb_toolkit* /usr/lib/postgresql16/
-COPY --from=timescaledb-toolkit /usr/share/postgresql/extension/timescaledb_toolkit* /usr/share/postgresql16/extension/
 
 # Copy timescaledb-tools
 COPY --from=timescaledb-tools /go/bin/* /usr/local/bin/
 
-# Copy all timescale newversions to the old postgresql version
+# Copy the new timescale version to the old postgresql version
 COPY --from=timescale-pg15 /usr/local/lib/postgresql/timescaledb*.so /usr/lib/postgresql15/
 COPY --from=timescale-pg15 /usr/local/share/postgresql/extension/timescaledb* /usr/share/postgresql15/extension/
 
-# Copy all timescale newversions to the old postgresql version
+# Copy the new timescale version to the new postgresql version
 COPY --from=timescale-pg16 /usr/local/lib/postgresql/timescaledb*.so /usr/lib/postgresql16/
 COPY --from=timescale-pg16 /usr/local/share/postgresql/extension/timescaledb* /usr/share/postgresql16/extension/
 
-# Copy libssl over from the old addon. This version is needed in alpine 3.19]
+# Copy libssl over from the old addon. This version is needed in alpine 3.19.
+# FIXUP
 COPY --from=timescale-pg15 /lib/libssl.so.1.1 /lib/
 COPY --from=timescale-pg15 /lib/libcrypto.so.1.1 /lib/
+
+# Copy new timescaledb-toolkit to new postgresql version
+COPY --from=timescaledb-toolkit /usr/local/lib/postgresql/timescaledb_toolkit* /usr/lib/postgresql16/
+COPY --from=timescaledb-toolkit /usr/local/share/postgresql/extension/timescaledb_toolkit* /usr/share/postgresql16/extension/
+
+# Add compatibility librarties for timescaledb toolkit
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    && apk add \
+        gcompat \
+        clang16-libclang
 
 #Add nano for debugging
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
-    && apk add \
-    nano
+    && apk add --no-cache \
+        nano
 
 # Make sure that S6 is not so hard on our service startup/shutdown
 ENV \
