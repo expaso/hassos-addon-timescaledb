@@ -10,7 +10,7 @@ arch:
   - armv7
   - armhf
   - i386
-codenotary: hans@expaso.nl
+#codenotary: hans@expaso.nl
 startup: system
 boot: auto
 init: false

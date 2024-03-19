@@ -76,9 +76,6 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
     && \
     apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.19/main \
         libturbojpeg
-#    && \
-#    apk add --repository https://dl-cdn.alpinelinux.org/alpine/edge/community \
-#        postgresql-timescaledb=2.13.1-r0
 
 # Create it's run directory
 RUN mkdir -p /run/postgresql \
@@ -181,8 +178,8 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
     && rm -rf /build 
 
 #Define timesaledb versions
-FROM timescale/timescaledb:2.14.1-pg15 as timescale-pg15
-FROM timescale/timescaledb:2.14.1-pg16 as timescale-pg16
+FROM timescale/timescaledb:2.14.2-pg15 as timescale-pg15
+FROM timescale/timescaledb:2.14.2-pg16 as timescale-pg16
 
 ###########################################
 # Timescaledb toolkit - Build and Install
@@ -191,20 +188,9 @@ FROM timescale/timescaledb:2.14.1-pg16 as timescale-pg16
 # https://docs.timescale.com/self-hosted/latest/tooling/install-toolkit/
 # https://packagecloud.io/app/timescale/timescaledb/search?q=timescaledb-toolkit&filter=all&dist=
 # https://stackoverflow.com/questions/57749127/how-can-i-specify-the-glibc-version-in-cargo-build-for-rust
-# https://stackoverflow.com/questions/57749127/how-can-i-specify-the-glibc-version-in-cargo-build-for-rust
 
-# --------------------------------------
-# Timescaledb toolkit - Build and Install
-# --------------------------------------
 FROM timescale-pg16 AS timescaledb-toolkit
 ENV TOOLKIT_VERSION 1.18.0
-
-# COPY rootfs /
-# RUN \
-#     set -ex \
-#     && cd /root \
-#     && apk add glibc-2.32-r0.apk --force \
-#     && apk add glibc-bin-2.32-r0.apk --force
 
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
@@ -241,9 +227,6 @@ RUN --mount=type=cache,id=pgrx-${TARGETARCH}-${TARGETVARIANT},sharing=locked,tar
     set -ex \
     && export PATH="/root/.cargo/bin:${PATH}" \
     && mkdir -p /build/ \
-    # && chown postgres:postgres -R /build \
-    # && chown postgres:postgres -R /usr/share/postgresql14 \
-    # && chown postgres:postgres -R /usr/lib/postgresql14 \        
     && cd /build \
         && git clone https://github.com/timescale/timescaledb-toolkit.git . \
         && git checkout ${TOOLKIT_VERSION} \
