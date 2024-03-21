@@ -3,24 +3,26 @@
 # ==============================================================================
 # Start PostgreSQL service if enabled
 # ==============================================================================
-declare postgres_data
-declare update
-declare postgres_pid
-declare version_file
+declare POSTGRES_DATA
+declare UPDATE
+declare POSTGRES_PID
+declare VERSION_FILE
+declare BUILD_TIMESTAMP
 
-postgres_data=/data/postgres
-version_file=/data/version
-update=false
+POSTGRES_DATA=/data/postgres
+VERSION_FILE=/data/version
+BUILD_TIMESTAMP="$(cat /build-timestamp)"
+UPDATE=false
 
 # Check if we need to update
-if [[ $(< ${version_file}) != $(bashio::addon.version) ]]; then
-	update=true
+if [[ $(cat ${VERSION_FILE}) != ${BUILD_TIMESTAMP} ]]; then
+	UPDATE=true
 fi
 
 # Start Postgres
 bashio::log.info "Starting PostgreSQL.."
-su - postgres -c "postgres -D ${postgres_data}" &
-postgres_pid=$!
+su - postgres -c "postgres -D ${POSTGRES_DATA}" &
+POSTGRES_PID=$!
 bashio::log.info "done"
 
 # Wait for postgres to become available..
@@ -35,9 +37,9 @@ if [[ -f "/data/firstrun" ]]; then
 fi
 
 # Check for extension updates..
-if bashio::var.true "${update}"; then
+if bashio::var.true "${UPDATE}"; then
 
-	bashio::log.notice "Addon was updated to version: $(bashio::addon.version). Performing database upgrades..."
+	bashio::log.notice "Addon was updated to version timestamp: ${BUILD_TIMESTAMP}. Performing database upgrades..."
 
 	# Fetch all databases..
 	psql \
@@ -61,33 +63,37 @@ if bashio::var.true "${update}"; then
 	done
 fi
 
-# Create all databases if not exist
-for database in $(bashio::config "databases"); do
-    bashio::log.info "Create database if not exist: '${database}'"
-	psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '${database}'" | grep -q 1 || psql -U postgres -c "CREATE DATABASE ${database}"
-done
-bashio::log.info "done"
 
-# Enable the timescale-extensions for all indicated databases
-for database in $(bashio::config "timescale_enabled"); do
-	if ! (psql -X -U postgres -d ${database} -c "select 1 from pg_extension where extname = 'timescaledb';" | grep -q 1); then
-		bashio::log.info "Enabling Timescale Extension for database: '${database}'"
-		psql -U "postgres" -d ${database} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;" || true >> /var/log/timescaledb.create.log
-	fi;
-done
+if bashio::config.has_value 'databases'; then
+	# Create all databases if not exist
+	for database in $(bashio::config "databases"); do
+		bashio::log.info "Create database if not exist: '${database}'"
+		psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '${database}'" | grep -q 1 || psql -U postgres -c "CREATE DATABASE ${database}"
+	done
+	bashio::log.info "done"
 
+	# Enable the timescale-extensions for all indicated databases
+	for database in $(bashio::config "timescale_enabled"); do
+		if ! (psql -X -U postgres -d ${database} -c "select 1 from pg_extension where extname = 'timescaledb';" | grep -q 1); then
+			bashio::log.info "Enabling Timescale Extension for database: '${database}'"
+			psql -U "postgres" -d ${database} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;" || true >> /var/log/timescaledb.create.log
+		fi;
+	done
+fi
 bashio::log.info "done"
 
 # Exit update mode
 rm -f /data/firstrun
-if bashio::var.true "${update}"; then
+if bashio::var.true "${UPDATE}"; then
 	bashio::log.info "Exiting update mode and restarting.."
 	# Write new addon-version
-	bashio::addon.version > ${version_file}
+	echo "${BUILD_TIMESTAMP}" > ${VERSION_FILE}
 	sleep 3
-	bashio::addon.restart
+
+	# Don't fail on the call. When running in standalone, this will fail.
+	bashio::addon.restart || true
 fi
 
 # And let it roll
 bashio::log.notice "TimescaleDb is running!"
-wait "${postgres_pid}"
+wait "${POSTGRES_PID}"

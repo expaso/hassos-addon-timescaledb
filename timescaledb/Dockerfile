@@ -280,7 +280,42 @@ ENV \
     S6_SERVICES_GRACETIME=50000 \
     S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
 
+ARG CACHE_BUST
+
+# Timestamp the build
+RUN date +%Y%m%d%H%M%S > /build-timestamp
+
 # Copy root fs files
-COPY rootfs /
+COPY rootfs /rootfs
+RUN rsync -LKavz /rootfs/ / && rm -rf /rootfs
 
 WORKDIR /
+
+# Build arugments
+ARG BUILD_DATE
+ARG BUILD_REF
+ARG BUILD_VERSION
+ARG BUILD_REPOSITORY
+
+# Labels
+LABEL \
+    io.hass.name="Timescaledb HA Addon (${BUILD_ARCH})" \
+    io.hass.description="Home Assistant Add-on: TimescaleDb" \
+    io.hass.arch="${BUILD_ARCH}" \
+    io.hass.type="base" \
+    io.hass.version=${BUILD_VERSION} \
+    io.hass.base.version=${BUILD_VERSION} \
+    io.hass.base.name="alpine" \
+    io.hass.base.image="hassioaddons/base" \
+    maintainer="Hans van Essen <hans@expaso.nl>" \
+    org.opencontainers.image.title="Timescaledb HA Addon (${BUILD_ARCH})" \
+    org.opencontainers.image.description="Home Assistant Add-on: TimescaleDb" \
+    org.opencontainers.image.vendor="Expaso BV" \
+    org.opencontainers.image.authors="Hans van Essen <hans@expaso.nl>" \
+    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.url="https://hub.docker.com/repository/docker/husselhans/hassos-addon-timescaledb-${BUILD_ARCH}/general" \
+    org.opencontainers.image.source="https://github.com/Expaso/hassos-addon-timescaledb" \
+    org.opencontainers.image.documentation="https://github.com/Expaso/hassos-addon-timescaledb/blob/master/README.md" \
+    org.opencontainers.image.created=${BUILD_DATE} \
+    org.opencontainers.image.revision=${BUILD_REF} \
+    org.opencontainers.image.version=${BUILD_VERSION}

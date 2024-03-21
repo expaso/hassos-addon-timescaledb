@@ -6,7 +6,6 @@
 # ==============================================================================
 
 # Install user configured/requested packages
-
 bashio::log.info "Running user-init.."
 
 if bashio::config.has_value 'system_packages'; then

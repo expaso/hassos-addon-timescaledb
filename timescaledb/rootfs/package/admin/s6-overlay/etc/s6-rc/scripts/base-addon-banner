@@ -1,0 +1,57 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Community Add-on: Base Images
+# Displays a simple add-on banner on startup
+# ==============================================================================
+declare BUILD_TIMESTAMP
+declare RUNNING_IN_HA
+
+BUILD_TIMESTAMP="$(cat /build-timestamp)"
+
+set +u
+if bashio::supervisor.ping ; then
+    RUNNING_IN_HA="true"
+else
+    RUNNING_IN_HA="false"
+fi
+set -u
+
+bashio::log.blue \
+    '-----------------------------------------------------------'
+bashio::log.blue " Add-on: TimescaleDB"
+bashio::log.blue " An open-source database built on PostgreSQL for analyzing time-series data with the power and convenience of SQL"
+bashio::log.blue \
+    '-----------------------------------------------------------'
+bashio::log.blue " Provided by: Hans van Essen <hans@expaso.nl>"
+bashio::log.blue \
+    '-----------------------------------------------------------'
+
+if (bashio::var.true "${RUNNING_IN_HA}"); then
+    bashio::log.blue " Add-on version: $(bashio::addon.version)"
+    if bashio::var.true "$(bashio::addon.update_available)"; then
+        bashio::log.magenta ' There is an update available for this add-on!'
+        bashio::log.magenta " Latest add-on version: $(bashio::addon.version_latest)"
+        bashio::log.magenta ' Please consider upgrading as soon as possible.'
+    else
+        bashio::log.green ' You are running the latest version of this add-on.'
+    fi
+    bashio::log.blue " System: $(bashio::info.operating_system)" \
+        " ($(bashio::info.arch) / $(bashio::info.machine))"
+
+    bashio::log.blue " Home Assistant Core: $(bashio::info.homeassistant)"
+    bashio::log.blue " Home Assistant Supervisor: $(bashio::info.supervisor)"
+else
+    bashio::log.magenta " Addon running in standalone mode."
+    bashio::log.magenta " Addon Compile Date: ${BUILD_TIMESTAMP}"
+    bashio::log.green " You can safely ignore any API errors."
+fi
+
+bashio::log.blue \
+    '-----------------------------------------------------------'
+bashio::log.blue \
+    ' Please, share the above information when looking for help'
+bashio::log.blue \
+    ' or support in, e.g., GitHub, forums or the Discord chat.'
+bashio::log.blue \
+    '-----------------------------------------------------------'

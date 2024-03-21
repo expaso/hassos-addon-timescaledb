@@ -1,5 +1,23 @@
 # Local development
 
+## The easy way
+
+Run `./project.sh` in the root of the project to build / debug / run the addon during development.
+
+Here are the commands explained:
+
+- `build` build the addon for the current architecture (see PLATFORM in the file) tag it as `dev` and push to docker hub.
+
+- `build-ha` Use the home-assistant builder to build all architechtures and push them to docker hub with the tag `latest`.
+
+- `run-hassos` build the addon for the current architecture (see PLATFORM in the file) tag it as `dev`, puish it to docker hub, SSH login to home-assistant, and pull the image.
+
+- `inspect` build the addon for the current architecture (see PLATFORM in the file) tag it as `dev`, and run it locally with an interactive shell (/bin/ash).
+
+- `debug` build the addon for the current architecture (see PLATFORM in the file) tag it as `dev`, and run it locally with normal starup (not interactive).
+
+## The manual way
+
 To build the lastest version using local docker, switch to the folder where the `dockerfile` resides, and run:
 
 ```

@@ -3,39 +3,44 @@
 # Home Assistant Add-on: TimescaleDb
 # Initializes the container during startup
 # ==============================================================================
-declare postgres_data
-declare version_file
-declare new_install
+declare POSTGRES_DATA
+declare VERSION_FILE
+declare NEW_INSTALL
+declare BUILD_TIMESTAMP
 
-postgres_data=/data/postgres
-version_file=/data/version
-new_install=false;
+POSTGRES_DATA=/data/postgres
+VERSION_FILE=/data/version
+NEW_INSTALL=false;
+BUILD_TIMESTAMP="$(cat /build-timestamp)"
 
 # Applies permission to the data directory for the postgres user
 applyPermissions () {
-	chown -R postgres:postgres ${postgres_data}
-	chmod 700 ${postgres_data}
+	chown -R postgres:postgres ${POSTGRES_DATA}
+	chmod 700 ${POSTGRES_DATA}
 }
 
 # Initializes the data directory
 initializeDataDirectory () {
 	# Init data-directory
     bashio::log.info "Initializing new postgres directory.."
-	mkdir -p ${postgres_data}
+	mkdir -p ${POSTGRES_DATA}
 	applyPermissions
-	su - postgres -c "initdb -D ${postgres_data}"
+	su - postgres -c "initdb -D ${POSTGRES_DATA}"
 	# Set timescaledb as being enabled in the postgres config file.
-	sed -r -i "s/[#]*\s*(shared_preload_libraries)\s*=\s*'(.*)'/\1 = 'timescaledb,\2'/;s/,'/'/" ${postgres_data}/postgresql.conf
+	sed -r -i "s/[#]*\s*(shared_preload_libraries)\s*=\s*'(.*)'/\1 = 'timescaledb,\2'/;s/,'/'/" ${POSTGRES_DATA}/postgresql.conf
 	
 	# Set Password protect IPv4 hosts by default
-	echo "host    all             all             0.0.0.0/0               md5" >> ${postgres_data}/pg_hba.conf
-	echo "local    all             all                                    md5" >> ${postgres_data}/pg_hba.conf
-	echo "local    all             all                                   peer" >> ${postgres_data}/pg_hba.conf
+	echo "host    all             all             0.0.0.0/0               md5" >> ${POSTGRES_DATA}/pg_hba.conf
+	echo "local    all             all                                    md5" >> ${POSTGRES_DATA}/pg_hba.conf
+	echo "local    all             all                                   peer" >> ${POSTGRES_DATA}/pg_hba.conf
 	# Set Listen on all addresses (*)
-	sed -r -i "s/[#]listen_addresses.=.'.*'/listen_addresses\ \=\ \'\*\'/g" ${postgres_data}/postgresql.conf
-	# Set telemetry level
-	echo "timescaledb.telemetry_level=$(bashio::config 'timescaledb.telemetry')" >> ${postgres_data}/postgresql.conf
-	echo "timescaledb.license_key='CommunityLicense'" >> ${postgres_data}/postgresql.conf
+	sed -r -i "s/[#]listen_addresses.=.'.*'/listen_addresses\ \=\ \'\*\'/g" ${POSTGRES_DATA}/postgresql.conf
+
+	echo "timescaledb.license_key='CommunityLicense'" >> ${POSTGRES_DATA}/postgresql.conf
+	if bashio::config.has_value 'timescaledb.telemetry'; then
+		# Set telemetry level
+		echo "timescaledb.telemetry_level=$(bashio::config 'timescaledb.telemetry')" >> ${POSTGRES_DATA}/postgresql.conf
+	fi
 	bashio::log.info "done"
 }
 
@@ -77,24 +82,24 @@ upgradeTimeScaleExtension () {
 # $1: The current version
 # $2: The new version
 upgradePostgreSQL() {
-	local fromVersion=${1}
-	local toVersion=${2}
+	local FROM_VERSION=${1}
+	local TO_VERSION=${2}
 
 	bashio::log.notice "Upgrading databases now. This could take a while. Please be patient..."
 
 	# Move the old data directory out of our way..
-	mv ${postgres_data} ${postgres_data}${fromVersion}
+	mv ${POSTGRES_DATA} ${POSTGRES_DATA}${FROM_VERSION}
 
 	# And upgrade PostgreSQL
-	bashio::log.notice "Upgrading PostgreSql from ${fromVersion} to ${toVersion}.."
+	bashio::log.notice "Upgrading PostgreSql from ${FROM_VERSION} to ${TO_VERSION}.."
 
 	# Backup old HBA.conf and create a temp one...
-	mv ${postgres_data}${fromVersion}/pg_hba.conf ${postgres_data}${fromVersion}/pg_hba_backup.conf
-	echo "local    all             all                                     trust" > ${postgres_data}${fromVersion}/pg_hba.conf
+	mv ${POSTGRES_DATA}${FROM_VERSION}/pg_hba.conf ${POSTGRES_DATA}${FROM_VERSION}/pg_hba_backup.conf
+	echo "local    all             all                                     trust" > ${POSTGRES_DATA}${FROM_VERSION}/pg_hba.conf
 
 	#Start postgres on the old data-dir
-	bashio::log.info "Starting PostgreSQL-${fromVersion} first.."
-	su - postgres -c "/usr/libexec/postgresql${fromVersion}/postgres -D ${postgres_data}${fromVersion}" &
+	bashio::log.info "Starting PostgreSQL-${FROM_VERSION} first.."
+	su - postgres -c "/usr/libexec/postgresql${FROM_VERSION}/postgres -D ${POSTGRES_DATA}${FROM_VERSION}" &
 	postgres_pid=$!
 
 	# Wait for postgres to become available..
@@ -106,88 +111,86 @@ upgradePostgreSQL() {
 	upgradeTimeScaleExtension
 
 	# Stop server
-	bashio::log.notice "Stopping PostgreSql ${fromVersion}.."
+	bashio::log.notice "Stopping PostgreSql ${FROM_VERSION}.."
 	kill ${postgres_pid}
 	wait ${postgres_pid} || true
 	bashio::log.notice "done"
 
 	# Restore HBA.CONF
-	rm ${postgres_data}${fromVersion}/pg_hba.conf
-	mv ${postgres_data}${fromVersion}/pg_hba_backup.conf ${postgres_data}${fromVersion}/pg_hba.conf
+	rm ${POSTGRES_DATA}${FROM_VERSION}/pg_hba.conf
+	mv ${POSTGRES_DATA}${FROM_VERSION}/pg_hba_backup.conf ${POSTGRES_DATA}${FROM_VERSION}/pg_hba.conf
 
 	# Create a fresh data-directory
 	initializeDataDirectory
 
 	# And upgrade!
 	bashio::log.notice "Upgrading databases.."
-	cd ${postgres_data}${fromVersion}
-	if su -c "pg_upgrade --old-bindir=/usr/libexec/postgresql${fromVersion} --new-bindir=/usr/libexec/postgresql${toVersion} --old-datadir=${postgres_data}${fromVersion} --new-datadir=${postgres_data} --link --username=postgres" -s /bin/sh postgres; then
+	cd ${POSTGRES_DATA}${FROM_VERSION}
+	if su -c "pg_upgrade --old-bindir=/usr/libexec/postgresql${FROM_VERSION} --new-bindir=/usr/libexec/postgresql${TO_VERSION} --old-datadir=${POSTGRES_DATA}${FROM_VERSION} --new-datadir=${POSTGRES_DATA} --link --username=postgres" -s /bin/sh postgres; then
 		bashio::log.notice "PostgreSQL upgraded succesfully!"
 		# Remove the old cluster...
-		rm -r ${postgres_data}${fromVersion}
+		rm -r ${POSTGRES_DATA}${FROM_VERSION}
 		return 0
 	else
 		# copy logs
-		cp -r /data/postgres/pg_upgrade_output.d  ${postgres_data}${fromVersion} || true
+		cp -r /data/postgres/pg_upgrade_output.d  ${POSTGRES_DATA}${FROM_VERSION} || true
 
 		# Rollback..
-		rm -r ${postgres_data}
-		mv ${postgres_data}${fromVersion} ${postgres_data}
+		rm -r ${POSTGRES_DATA}
+		mv ${POSTGRES_DATA}${FROM_VERSION} ${POSTGRES_DATA}
 
 		bashio::log.error "PostgreSQL could not upgrade! Please inspect any errors in the lines above!"
 		return 1
 	fi
 }
 
-
 # Prepare /tmp/pg_stat_tmp directory
 mkdir -p /tmp/pg_stat_tmp
 chown postgres:postgres /tmp/pg_stat_tmp
 
-
-if ! bashio::fs.directory_exists "${postgres_data}"; then
+if ! bashio::fs.directory_exists "${POSTGRES_DATA}"; then
     bashio::log.info "Detected a fresh installation! Welcome! We're setting things up for you.."
-    new_install=true
+    NEW_INSTALL=true
 else
-    touch ${version_file}
+    touch ${VERSION_FILE}
 	# Always re-apply permissions, because they seem to be reset after a snapshot restore
 	applyPermissions
 fi
 
 # Initialize for new installs
-if bashio::var.true "${new_install}"; then
+if bashio::var.true "${NEW_INSTALL}"; then
 	touch /data/firstrun
-	bashio::addon.version > ${version_file}
+	echo "${BUILD_TIMESTAMP}" > ${VERSION_FILE}
 	initializeDataDirectory
 else
 
 	# Check if we need to restore again.
 	if $(bashio::config.true 'retry_upgrade'); then
-		if bashio::fs.directory_exists "${postgres_data}14"; then
+		if bashio::fs.directory_exists "${POSTGRES_DATA}14"; then
 			bashio::log.notice "An aborted upgrade from Postgres 14 was detected. Restoring.."
-			rm -r ${postgres_data}
-			mv ${postgres_data}14 ${postgres_data}
+			rm -r ${POSTGRES_DATA}
+			mv ${POSTGRES_DATA}14 ${POSTGRES_DATA}
 		else
 			bashio::config.suggest.false 'retry_upgrade' 'This option is only for temporary reasons: to recover from a failed upgrade.'
 		fi
 	fi
 
 	# Check if we need to upgrade from 12 to 15
-	if [[ $(< ${postgres_data}/PG_VERSION) == "12" ]]; then
+	if [[ $(< ${POSTGRES_DATA}/PG_VERSION) == "12" ]]; then
 		bashio::log.notice "A database upgrade is required from Postgres 12."
 		bashio::log.error "Upgrade was not succesfull. This addon version does no longer support Postgres 12. Please upgrade to the previous version of the addon and upgrade to Postgres 14 first." 
 		exit 1
 	fi
 
 	# Check if we need to upgrade from 14 to 15
-	if [[ $(< ${postgres_data}/PG_VERSION) == "14" ]]; then
+	if [[ $(< ${POSTGRES_DATA}/PG_VERSION) == "14" ]]; then
 		bashio::log.notice "A database upgrade is required from Postgres 14."
 		bashio::log.error "Upgrade was not succesfull. This addon version does no longer support Postgres 12. Please upgrade to the previous version of the addon and upgrade to Postgres 14 first." 
 		exit 1
 	fi
 
 	# Check if we need to upgrade from 15 to 16
-	if [[ $(< ${postgres_data}/PG_VERSION) == "15" ]]; then
+	if [[ $(< ${POSTGRES_DATA}/PG_VERSION) == "15" ]]; then
 		bashio::log.notice "A database upgrade is required from Postgres 15."
 		if upgradePostgreSQL 15 16; then
 			bashio::log.notice "Upgrade was succesful"
@@ -200,20 +203,26 @@ fi
 
 bashio::log.info "done"
 
-# Apply TimescaleDb mem/cpu tuning settings
-bashio::log.info "Tuning resources.."
 
-# Always patch telemetry level
-sed -r -i "s/timescaledb.telemetry_level.=.'.*'/timescaledb.telemetry_level=$(bashio::config 'timescaledb.telemetry')/g" ${postgres_data}/postgresql.conf
+# Patch telemetry level
+if bashio::config.has_value 'timescaledb.telemetry'; then
+	sed -r -i "s/timescaledb.telemetry_level.=.'.*'/timescaledb.telemetry_level=$(bashio::config 'timescaledb.telemetry')/g" ${POSTGRES_DATA}/postgresql.conf
+fi
+if bashio::config.has_value 'timescaledb.maxmemory'; then
+	# Apply TimescaleDb mem/cpu tuning settings
+	bashio::log.info "Tuning resources.."
 
-chmod 707 "/usr/share/timescaledb/002_timescaledb_tune.sh"
-TS_TUNE_MEMORY=$(bashio::config 'timescaledb.maxmemory') \
-	TS_TUNE_NUM_CPUS=$(bashio::config 'timescaledb.maxcpus') \
-	POSTGRESQL_CONF_DIR=${postgres_data} \
-	/usr/share/timescaledb/002_timescaledb_tune.sh
-bashio::log.info "done"
+	chmod 707 "/usr/share/timescaledb/002_timescaledb_tune.sh"
+	TS_TUNE_MEMORY=$(bashio::config 'timescaledb.maxmemory') \
+		TS_TUNE_NUM_CPUS=$(bashio::config 'timescaledb.maxcpus') \
+		POSTGRESQL_CONF_DIR=${POSTGRES_DATA} \
+		/usr/share/timescaledb/002_timescaledb_tune.sh
+	bashio::log.info "done"
+fi
 
 # Appy max connections
-bashio::log.info "Applying max connections.."
-sed -i -e "/max_connections =/ s/= .*/= $(bashio::config 'max_connections')/" ${postgres_data}/postgresql.conf
-bashio::log.info "done"
+if bashio::config.has_value 'max_connections'; then
+	bashio::log.info "Applying max connections.."
+	sed -i -e "/max_connections =/ s/= .*/= $(bashio::config 'max_connections')/" ${POSTGRES_DATA}/postgresql.conf
+	bashio::log.info "done"
+fi
