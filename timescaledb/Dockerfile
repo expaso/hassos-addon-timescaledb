@@ -120,18 +120,18 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 COPY --from=timescale-pg15 --link /usr/local/lib/postgresql/timescaledb*.so /usr/lib/postgresql15/
 COPY --from=timescale-pg15 --link /usr/local/share/postgresql/extension/timescaledb* /usr/share/postgresql15/extension/
 # FIXUP Copy libssl over from the old addon. This version is needed in alpine 3.19.
-COPY --from=timescale-pg15 /lib/libssl.so.1.1 /lib/
-COPY --from=timescale-pg15 /lib/libcrypto.so.1.1 /lib/
+COPY --from=timescale-pg15 --link /lib/libssl.so.1.1 /lib/
+COPY --from=timescale-pg15 --link /lib/libcrypto.so.1.1 /lib/
 
 # -----------------------------------------
-# Timescale pg-15 (NEW)
+# Timescale pg-16 (NEW)
 # -----------------------------------------
 # Copy the new timescale version to the new postgresql version
 COPY --from=timescale-pg16 --link /usr/local/lib/postgresql/timescaledb*.so /usr/lib/postgresql16/
 COPY --from=timescale-pg16 --link /usr/local/share/postgresql/extension/timescaledb* /usr/share/postgresql16/extension/
 
 # --------------------------------------------
-# pgAgent (NEW)
+# pgAgent pg-16 (NEW)
 # --------------------------------------------
 # Copy the new timescale version to the new postgresql version
 COPY --from=pgagent-pg16 --link /usr/local/lib/postgresql/pgagent*.so /usr/lib/postgresql16/
@@ -140,8 +140,16 @@ COPY --from=pgagent-pg16 --link /usr/local/share/postgresql/extension/pgagent* /
 
 COPY --from=pgagent-pg16 --link /usr/local/share/pgagent.sql /usr/local/share/
 COPY --from=pgagent-pg16 --link /usr/local/bin/pgagent /usr/local/bin/
+
+# Add compatibility libraries
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    && apk update \
+    && apk add \
+        boost-libs
+
 # --------------------------------------
-# Timescaledb toolkit (NEW)
+# Timescaledb pg16 toolkit (NEW)
 # --------------------------------------
 # Copy new timescaledb-toolkit to new postgresql version
 COPY --from=timescaledb-toolkit-pg16 --link /usr/local/lib/postgresql/timescaledb_toolkit* /usr/lib/postgresql16/
@@ -149,11 +157,18 @@ COPY --from=timescaledb-toolkit-pg16 --link /usr/local/share/postgresql/extensio
 
 # Add compatibility librarties for timescaledb toolkit
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
-    --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
     set -ex \
+    && apk update \
     && apk add \
         gcompat \
         clang16-libclang
+
+# --------------------------------------
+# Timescaledb Tools pg16 toolkit (NEW)
+# --------------------------------------
+# Copy timescaledb-tools
+COPY --from=timescaledb-tools /go/bin/* /usr/local/bin/
+
 
 ###########################################
 # Finalize Image

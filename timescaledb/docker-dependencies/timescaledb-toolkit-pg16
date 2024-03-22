@@ -2,7 +2,7 @@ FROM timescale/timescaledb:2.14.2-pg16 as timescale-pg16
 
 FROM timescale-pg16 AS timescaledb-toolkit
 ARG VERSION=1.18.0
-
+ARG TARGETARCH
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
     set -ex \
@@ -34,14 +34,14 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk update \
-    && if [ "$TARGETARCH" == "amd64" || "$TARGETARCH" == "arm64" ]; then \
+    && if [ "$TARGETARCH" == "amd64" ] || [ "$TARGETARCH" == "arm64" ]; then \
         apk add gcompat clang16-libclang clang15-libclang; \
     fi
 
 RUN --mount=type=cache,id=pgrx-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.pgrx \
     --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
     set -ex \
-    && if [ "$TARGETARCH" == "amd64" || "$TARGETARCH" == "arm64" ]; then \
+    && if [ "$TARGETARCH" == "amd64" ] || [ "$TARGETARCH" == "arm64" ]; then \
         export PATH="/root/.cargo/bin:${PATH}" \
         && mkdir -p /build/ \
         && cd /build \
@@ -55,5 +55,6 @@ RUN --mount=type=cache,id=pgrx-${TARGETARCH}-${TARGETVARIANT},sharing=locked,tar
             && cargo pgrx install --release \
             && cargo run --manifest-path ../tools/post-install/Cargo.toml -- /usr/local/bin/pg_config \
         && cd ~ \
-        && rm -rf /build; \
+        && rm -rf /build \
+        && echo "OK" /toolkit; \
     fi

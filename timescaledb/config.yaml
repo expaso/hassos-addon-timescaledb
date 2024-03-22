@@ -18,7 +18,16 @@ tmpfs: true
 map:
   - share:rw
   - backup:rw
+  - media:rw
 timeout: 60
+breaking_versions:
+  2.0.0
+  2.0.1
+  2.1.0
+  2.1.1
+  3.0.0
+  3.0.1
+  3.0.2
 ports:
   5432/tcp:
 ports_description:
