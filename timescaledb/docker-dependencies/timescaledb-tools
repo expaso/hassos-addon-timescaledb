@@ -1,0 +1,15 @@
+ARG GO_VERSION=1.19.0
+
+###########################################
+# Build TimeScaleDB-tools
+###########################################
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine AS timescaledb-tools
+
+ARG VERSION=latest
+
+ENV TOOLS_VERSION 0.8.1
+RUN apk update && apk add --no-cache git \
+    && go install github.com/timescale/timescaledb-tune/cmd/timescaledb-tune@${VERSION} \
+    && go install github.com/timescale/timescaledb-parallel-copy/cmd/timescaledb-parallel-copy@${VERSION} \
+    && go install github.com/timescale/timescaledb-backup/cmd/ts-dump@${VERSION} \
+    && go install github.com/timescale/timescaledb-backup/cmd/ts-restore@${VERSION}

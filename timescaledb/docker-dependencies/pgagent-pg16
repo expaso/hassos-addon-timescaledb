@@ -1,0 +1,38 @@
+FROM timescale/timescaledb:latest-pg16
+ARG VERSION
+
+# --------------------------------------------
+# pgAgent - build pached version and install
+# --------------------------------------------
+RUN mkdir -p /build
+COPY timescaledb/pgagent.patch /build/
+
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    && apk update \
+    && apk add --virtual .fetch-deps \
+                ca-certificates \
+                git \
+                openssl \
+                openssl-dev \
+                tar \
+        && apk add -u musl \
+    && apk add --virtual .build-deps \
+                coreutils \
+                gcc \
+                make \
+                cmake \
+				build-base \
+				boost-dev \
+				openldap-dev \
+&& git clone https://github.com/postgres/pgagent /build/pgagent \
+    && cd /build/pgagent \
+    && git checkout ${PGAGENT_VERSION} \
+&& git apply -v ../pgagent.patch \
+    && cmake . \
+    && make && make install \
+    && cd ~ \
+    && apk del .fetch-deps .build-deps \
+    && rm -rf /build \
+	&& apk add \
+				boost-libs

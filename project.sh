@@ -32,6 +32,25 @@ function printInColor() {
     echo -e "\e[${background}m\e[${color}m$1\e[0m"
 }
 
+function build_dependency() {
+    local component=$1
+    local version=$2
+
+    printInColor "Building docker dependency ${component}" "green"
+
+    docker buildx build \
+        --push \
+        --platform linux/amd64,linux/arm64,linux/arm/v7,linux/i386,linux/arm/v6 \
+        --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb-${component}:cache \
+        --cache-to type=registry,ref=husselhans/hassos-addon-timescaledb-${component}:cache,mode=max \
+        --tag husselhans/hassos-addon-timescaledb-${component}:${version} \
+        --progress plain \
+        --build-arg "VERSION=${version}" \
+        --file ./timescaledb/docker-dependencies/${component} \
+        . \
+        && printInColor "Done building docker image!" "green"    
+}
+
 function build() {
     local output=$1
 
@@ -50,22 +69,6 @@ function build() {
         --output ${output} \
         ./timescaledb \
         && printInColor "Done building docker image!" "green"
-
-    #    --cache-to type=registry,ref=husselhans/hassos-addon-timescaledb:cache,mode=max \
-
-
-    # docker buildx build \
-    #     --push \
-    #     --platform ${PLATFORM} \
-    #     --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb:cache \
-    #     --cache-to type=registry,ref=husselhans/hassos-addon-timescaledb:cache,mode=max \
-    #     --tag husselhans/hassos-addon-timescaledb-aarch64-dev \
-    #     --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:15.0.7 \
-    #     --progress plain \
-    #     ./timescaledb \
-    #     && docker image push husselhans/hassos-addon-timescaledb-aarch64:dev \
-    #     && printInColor "Done building docker image!" "green"
-
 
     #Stop when an error occured
     if [ $? -ne 0 ]; then
@@ -117,11 +120,19 @@ function build_ha() {
         --target timescaledb \
         --all \
         -v latest \
-        -t /data
+        -t /data \
+        --docker-user husselhans \
+        --docker-password ***REMOVED***
 }
 
 if [ "$1" == "build" ]; then
     build "type=registry,push=true"
+    exit 0
+elif [ "$1" == "build-dependencies" ]; then
+    build_dependency timescaledb-tools "latest"
+    build_dependency pgagent-pg16 "4.2.2"
+    build_dependency timescaledb-toolkit-pg16 "1.18.0"
+    build_dependency postgis-pg15 "3.3.3"
     exit 0
 elif [ "$1" == "build-ha" ]; then
     build_ha latest
@@ -142,4 +153,3 @@ else
     printInColor "Unknown command!" "red"
     exit 1
 fi
-

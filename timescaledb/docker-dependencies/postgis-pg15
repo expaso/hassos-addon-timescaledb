@@ -1,0 +1,62 @@
+
+FROM timescale/timescaledb:latest-pg15 as timescale-pg15
+
+# --------------------------------------
+# PostGIS - Build and install OLD Postgis (for upgrade reasons)
+# --------------------------------------
+ARG VERSION 3.3.3
+
+# PostGIS - Add required packages for runtime (see postgis dependencies)
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    && apk update \
+    && apk add  \
+	openexr \ 
+    poppler \
+    gdal \
+    geos \
+    json-c \
+    libgcc \
+    libpq \
+    libstdc++ \
+    libxml2 \ 
+    musl \
+    pcre \
+    perl \
+    proj \
+    protobuf-c
+
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    && apk update \
+    && apk add --virtual .fetch-deps \
+                ca-certificates \
+                git \
+                openssl \
+                openssl-dev \
+                tar \
+                wget \
+    && mkdir -p /build/ \
+    && wget -P /build https://download.osgeo.org/postgis/source/postgis-${VERSION}.tar.gz \
+    && apk add --virtual .build-deps \
+                coreutils \
+                gcc \
+                make \
+                cmake \
+				build-base \
+                libxml2-dev \
+                protobuf-c-dev \
+                clang15 \
+                llvm15 \
+    && apk add --virtual .community-build-deps \
+                geos-dev \
+                proj-dev \
+                gdal-dev \
+    && cd /build \
+    && tar xvzf postgis-${VERSION}.tar.gz \
+    && cd /build/postgis-${VERSION} \
+    && ./configure --with-pgconfig=/usr/local/bin/pg_config \
+    && make && make install \
+    && cd ~ \
+    && apk del .fetch-deps .build-deps .community-build-deps \
+    && rm -rf /build 
