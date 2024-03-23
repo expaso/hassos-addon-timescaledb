@@ -15,14 +15,15 @@ FROM husselhans/hassos-addon-timescaledb-timescaledb-toolkit-pg16:1.18.0    as t
 ###########################################
 FROM $BUILD_FROM as addon
 ARG BUILD_ARCH
-
-#Update the base image apk
-RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
-    apk update
+ARG TARGETARCH=${BUILD_ARCH}
+ARG TARGETVARIANT
 
 # Add some handy tools
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
-    apk add \
+    set -ex \
+    && apk update \
+    && apk add ca-certificates \
+    && apk add \
         wget \
         rsync \
         nano
@@ -35,12 +36,13 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 # PostgreSql 15 (OLD)
 # -----------------------------------------
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
-    apk add \
-    postgresql15-jit \
-    postgresql15 \
-    postgresql15-dev \
-    postgresql15-contrib-jit \
-    postgresql15-contrib
+    set -ex \
+    && apk add \
+        postgresql15-jit \
+        postgresql15 \
+        postgresql15-dev \
+        postgresql15-contrib-jit \
+        postgresql15-contrib
 
 # Make sure pg_config follows the most current version
 RUN rm /usr/bin/pg_config \
@@ -50,12 +52,13 @@ RUN rm /usr/bin/pg_config \
 # PostgreSql 16 (NEW)
 # -----------------------------------------
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
-    apk add \
-    postgresql16-jit \
-    postgresql16 \
-    postgresql16-dev \
-    postgresql16-contrib-jit \
-    postgresql16-contrib
+    set -ex \
+    && apk add \
+        postgresql16-jit \
+        postgresql16 \
+        postgresql16-dev \
+        postgresql16-contrib-jit \
+        postgresql16-contrib
 
 # Set default postgresql version to 16
 RUN rm /usr/libexec/postgresql \
@@ -89,23 +92,23 @@ COPY --from=postgis-pg15 --link /usr/local/share/postgresql/extension/postgis* /
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add  \
-	openexr \ 
-    poppler \
-    gdal \
-    geos \
-    json-c \
-    libgcc \
-    libpq \
-    libstdc++ \
-    libxml2 \ 
-    musl \
-    pcre \
-    perl \
-    proj \
-    protobuf-c
+        openexr \ 
+        poppler \
+        gdal \
+        geos \
+        json-c \
+        libgcc \
+        libpq \
+        libstdc++ \
+        libxml2 \ 
+        musl \
+        pcre \
+        perl \
+        proj \
+        protobuf-c
 
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
-    apk update \
+    set -ex \
     && apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.19/community --allow-untrusted \
         postgis=3.4.2-r0 \
         gdal-driver-PostGISRaster \
@@ -144,7 +147,6 @@ COPY --from=pgagent-pg16 --link /usr/local/bin/pgagent /usr/local/bin/
 # Add compatibility libraries
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
-    && apk update \
     && apk add \
         boost-libs
 
@@ -158,7 +160,6 @@ COPY --from=timescaledb-toolkit-pg16 --link /usr/local/share/postgresql/extensio
 # Add compatibility librarties for timescaledb toolkit
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
-    && apk update \
     && apk add \
         gcompat \
         clang16-libclang
@@ -168,7 +169,6 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 # --------------------------------------
 # Copy timescaledb-tools
 COPY --from=timescaledb-tools /go/bin/* /usr/local/bin/
-
 
 ###########################################
 # Finalize Image

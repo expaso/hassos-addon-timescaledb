@@ -109,30 +109,66 @@ function inspect() {
 function build_ha() {
     local tag=$1
     printInColor "Building all platforms for Home Assistant with tag ${tag}"
+
+    #Get all platforms from /timeacledb/config.yaml
+    platforms=$(yq -r '.arch[]' ./timescaledb/config.yaml)
+
+    #And loop trough them
+    for platform in $platforms; do
+
+        # Get the value from timesacledb/build.yaml by looking it up in the build_from dictionary, whereby the key value of the list is the platform.
+        build_from=$(yq -r ".build_from.${platform}" ./timescaledb/build.yaml)
+
+        # Convert the platform to the correct format
+        case $platform in
+            "aarch64") docker_platform="linux/arm64";;
+            "amd64") docker_platform="linux/amd64";;
+            "armv7") docker_platform="linux/arm/v7";;
+            "i386") docker_platform="linux/i386";;
+            "armhf") docker_platform="linux/arm/v6";;
+        esac
+
+        printInColor "Building platform ${platform} (${docker_platform}) for Home Assistant with tag ${tag}" "green"
+
+        docker buildx build \
+            --platform "${docker_platform}" \
+            --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb:cache \
+            --cache-to type=registry,ref=husselhans/hassos-addon-timescaledb:cache,mode=max \
+            --tag husselhans/hassos-addon-timescaledb-${platform}:${tag} \
+            --build-arg "BUILD_FROM=${build_from}" \
+            --build-arg "BUILD_ARCH=${platform}" \
+            --build-arg "VERSION=${tag}" \
+            --file ./timescaledb/Dockerfile \
+            --output type=registry,push=true \
+            ./timescaledb \
+            && printInColor "Done building docker image!" "green"
+    done
+
+
     #docker login
-    docker run \
-        --rm \
-        --privileged \
-        -v ~/.docker:/root/.docker \
-        -v /var/run/docker.sock:/var/run/docker.sock:ro \
-        -v ${PWD}/timescaledb:/data \
-        homeassistant/amd64-builder \
-        --target timescaledb \
-        --all \
-        -v latest \
-        -t /data \
-        --docker-user husselhans \
-        --docker-password ***REMOVED***
+    # docker run \
+    #     --rm \
+    #     --privileged \
+    #     -v ~/.docker:/root/.docker \
+    #     -v /var/run/docker.sock:/var/run/docker.sock:ro \
+    #     -v ${PWD}/timescaledb:/data \
+    #     homeassistant/amd64-builder \
+    #     --target timescaledb \
+    #     --armhf \
+    #     -v ${tag} \
+    #     -t /data \
+    #     --docker-user husselhans \
+    #     --docker-password ***REMOVED***
 }
 
 if [ "$1" == "build" ]; then
     build "type=registry,push=true"
     exit 0
 elif [ "$1" == "build-dependencies" ]; then
-    #build_dependency timescaledb-tools "latest"
-    #build_dependency pgagent-pg16 "4.2.2"
+    build_dependency timescaledb-tools "latest"
+    build_dependency pgagent-pg16 "4.2.2"
     build_dependency timescaledb-toolkit-pg16 "1.18.0"
-    #build_dependency postgis-pg15 "3.3.3"
+    build_dependency postgis-pg15 "3.3.3"
     exit 0
 elif [ "$1" == "build-ha" ]; then
     build_ha latest
