@@ -98,7 +98,24 @@ function run_local() {
     docker run --rm --name timescaledb --platform ${PLATFORM} -v /tmp/timescale_data:/data -p 5432:5432 husselhans/hassos-addon-timescaledb-aarch64:dev  
 }
 
+function release() {
+    local tag=$1
+    printInColor "Releasing docker image with tag ${tag}.."
+
+    #Get all platforms from /timeacledb/config.yaml
+    platforms=$(yq -r '.arch[]' ./timescaledb/config.yaml)
+
+    #And loop trough them
+    for platform in $platforms; do
+        printInColor "Releasing platform ${platform} with tag ${tag}.."
+
+        docker tag husselhans/hassos-addon-timescaledb-${platform}:latest husselhans/hassos-addon-timescaledb-${platform}:${tag}
+        docker push husselhans/hassos-addon-timescaledb-${platform}:${tag}
+    done
+}
+
 function inspect() {
+    local tag=$1
     printInColor "Starting standalone docker image shell"
 
     # Run the docker image locally
@@ -182,8 +199,11 @@ elif [ "$1" == "debug" ]; then
     run_local
     exit 0
 elif [ "$1" == "inspect" ]; then
-    build type=docker
-    inspect
+    #build type=docker
+    inspect $2
+    exit 0
+elif [ "$1" == "release" ]; then
+    release $2
     exit 0
 else
     printInColor "Unknown command!" "red"

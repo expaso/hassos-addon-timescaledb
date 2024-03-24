@@ -185,7 +185,7 @@ else
 	# Check if we need to upgrade from 14 to 15
 	if [[ $(< ${POSTGRES_DATA}/PG_VERSION) == "14" ]]; then
 		bashio::log.notice "A database upgrade is required from Postgres 14."
-		bashio::log.error "Upgrade was not succesfull. This addon version does no longer support Postgres 12. Please upgrade to the previous version of the addon and upgrade to Postgres 14 first." 
+		bashio::log.error "Upgrade was not succesfull. This addon version does no longer support Postgres 14. Please upgrade to the previous version of the addon and upgrade to Postgres 15 first." 
 		exit 1
 	fi
 
