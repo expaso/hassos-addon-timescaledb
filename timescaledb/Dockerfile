@@ -1,10 +1,12 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:15.0.7
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:16.2.1
 ARG BUILD_ARCH=aarch64
+
+ARG ALPINE_VERSION=3.20
 
 # Define the versions for all components of the addon
 # These images are all prebuild, otherwise building the docker images takes waaaay to long
-FROM timescale/timescaledb:2.14.2-pg15                                      as timescale-pg15
-FROM timescale/timescaledb:2.14.2-pg16                                      as timescale-pg16
+FROM timescale/timescaledb:2.16.1-pg15                                      as timescale-pg15
+FROM timescale/timescaledb:2.16.1-pg16                                      as timescale-pg16
 FROM husselhans/hassos-addon-timescaledb-timescaledb-tools:latest           as timescaledb-tools
 FROM husselhans/hassos-addon-timescaledb-postgis-pg15:3.3.3                 as postgis-pg15
 FROM husselhans/hassos-addon-timescaledb-pgagent-pg16:4.2.2                 as pgagent-pg16
@@ -110,7 +112,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.19/community --allow-untrusted \
-        postgis=3.4.2-r0 \
+        postgis=3.4.2-r2 \
         gdal-driver-PostGISRaster \
     && \
     apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.19/main \
@@ -123,8 +125,8 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 COPY --from=timescale-pg15 --link /usr/local/lib/postgresql/timescaledb*.so /usr/lib/postgresql15/
 COPY --from=timescale-pg15 --link /usr/local/share/postgresql/extension/timescaledb* /usr/share/postgresql15/extension/
 # FIXUP Copy libssl over from the old addon. This version is needed in alpine 3.19.
-COPY --from=timescale-pg15 --link /lib/libssl.so.1.1 /lib/
-COPY --from=timescale-pg15 --link /lib/libcrypto.so.1.1 /lib/
+COPY --from=timescale-pg15 --link /lib/libssl.so.1.* /lib/
+COPY --from=timescale-pg15 --link /lib/libcrypto.so.1.* /lib/
 
 # -----------------------------------------
 # Timescale pg-16 (NEW)

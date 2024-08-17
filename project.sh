@@ -63,7 +63,7 @@ function build() {
         --platform ${PLATFORM} \
         --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb:cache \
         --tag husselhans/hassos-addon-timescaledb-aarch64:dev \
-        --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:15.0.7 \
+        --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:16.2.1 \
         --progress plain \
         --build-arg CACHE_BUST=$(date +%s) \
         --output ${output} \
@@ -100,12 +100,12 @@ function run_local() {
 
 function release() {
     local tag=$1
-    printInColor "Releasing docker image with tag ${tag}.."
+    printInColor "Releasing docker images: retagging form [latest] with tag ${tag}.."
 
-    #Get all platforms from /timeacledb/config.yaml
+    #Get all platforms from /timescaledb/config.yaml
     platforms=$(yq -r '.arch[]' ./timescaledb/config.yaml)
 
-    #And loop trough them
+    #And loop through them
     for platform in $platforms; do
         printInColor "Releasing platform ${platform} with tag ${tag}.."
 
@@ -127,13 +127,13 @@ function build_ha() {
     local tag=$1
     printInColor "Building all platforms for Home Assistant with tag ${tag}"
 
-    #Get all platforms from /timeacledb/config.yaml
+    #Get all platforms from /timescaledb/config.yaml
     platforms=$(yq -r '.arch[]' ./timescaledb/config.yaml)
 
-    #And loop trough them
+    #And loop through them
     for platform in $platforms; do
 
-        # Get the value from timesacledb/build.yaml by looking it up in the build_from dictionary, whereby the key value of the list is the platform.
+        # Get the value from timescaledb/build.yaml by looking it up in the build_from dictionary, whereby the key value of the list is the platform.
         build_from=$(yq -r ".build_from.${platform}" ./timescaledb/build.yaml)
 
         # Convert the platform to the correct format
@@ -185,7 +185,7 @@ elif [ "$1" == "build-dependencies" ]; then
     build_dependency timescaledb-tools "latest"
     build_dependency pgagent-pg16 "4.2.2"
     build_dependency timescaledb-toolkit-pg16 "1.18.0"
-    build_dependency postgis-pg15 "3.3.3"
+    build_dependency postgis-pg15 "3.4.2"
     exit 0
 elif [ "$1" == "build-ha" ]; then
     build_ha latest

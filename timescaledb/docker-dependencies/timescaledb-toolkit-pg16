@@ -1,4 +1,4 @@
-FROM timescale/timescaledb:2.14.2-pg16 as timescale-pg16
+FROM timescale/timescaledb:2.16.1-pg16 as timescale-pg16
 
 FROM timescale-pg16 AS timescaledb-toolkit
 ARG VERSION=1.18.0

@@ -68,9 +68,9 @@ upgradeTimeScaleExtension () {
 			# See: https://github.com/timescale/timescaledb-extras/issues/34
 			# Please note that we do not drop the extension itself, because that would drop the hypertables as well.
 			# The views and functions could be recreated from: https://github.com/timescale/timescaledb-extras
-			#psql -U "postgres" homeassistant -c "drop function if exists public.get_dimension_details(regclass)"; \
-			#psql -U "postgres" homeassistant -c "drop view if exists public.chunks_tstz"; \
-			#psql -U "postgres" homeassistant -c "drop view if exists public.chunks_ts"; \
+			psql -U "postgres" homeassistant -c "drop function if exists public.get_dimension_details(regclass)"; \
+			psql -U "postgres" homeassistant -c "drop view if exists public.chunks_tstz"; \
+			psql -U "postgres" homeassistant -c "drop view if exists public.chunks_ts"; \
 			(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb UPDATE;" || true)
 		)
 	done
