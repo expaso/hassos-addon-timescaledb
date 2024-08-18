@@ -187,7 +187,7 @@ ARG CACHE_BUST
 RUN date +%Y%m%d%H%M%S > /build-timestamp
 
 # Copy root fs files
-# hadolint ignore=DL3018
+# hadolint ignore=DL3021
 COPY --link rootfs /rootfs
 RUN rsync -LKavz /rootfs/ / && rm -rf /rootfs
 
