@@ -7,6 +7,7 @@ ARG ALPINE_VERSION=3.20
 # These images are all prebuild, otherwise building the docker images takes waaaay to long
 FROM timescale/timescaledb:2.16.1-pg15                                      as timescale-pg15
 FROM timescale/timescaledb:2.16.1-pg16                                      as timescale-pg16
+# hadolint ignore=DL3007
 FROM husselhans/hassos-addon-timescaledb-timescaledb-tools:latest           as timescaledb-tools
 FROM husselhans/hassos-addon-timescaledb-postgis-pg15:3.3.3                 as postgis-pg15
 FROM husselhans/hassos-addon-timescaledb-pgagent-pg16:4.2.2                 as pgagent-pg16
@@ -15,12 +16,14 @@ FROM husselhans/hassos-addon-timescaledb-timescaledb-toolkit-pg16:1.18.0    as t
 ###########################################
 # Define base Image
 ###########################################
+# hadolint ignore=DL3006
 FROM $BUILD_FROM as addon
 ARG BUILD_ARCH
 ARG TARGETARCH=${BUILD_ARCH}
 ARG TARGETVARIANT
 
 # Add some handy tools
+# hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk update \
@@ -37,6 +40,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 # -----------------------------------------
 # PostgreSql 15 (OLD)
 # -----------------------------------------
+# hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add \
@@ -53,6 +57,7 @@ RUN rm /usr/bin/pg_config \
 # -----------------------------------------
 # PostgreSql 16 (NEW)
 # -----------------------------------------
+# hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add \
@@ -91,6 +96,7 @@ COPY --from=postgis-pg15 --link /usr/local/share/postgresql/extension/postgis* /
 # Postgis pg-16 (NEW)
 # -----------------------------------------
 #Add required packages for runtime (see postgis dependencies)
+# hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add  \
@@ -108,7 +114,8 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
         perl \
         proj \
         protobuf-c
-
+        
+# hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.19/community --allow-untrusted \
@@ -147,6 +154,7 @@ COPY --from=pgagent-pg16 --link /usr/local/share/pgagent.sql /usr/local/share/
 COPY --from=pgagent-pg16 --link /usr/local/bin/pgagent /usr/local/bin/
 
 # Add compatibility libraries
+# hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add \
@@ -160,6 +168,7 @@ COPY --from=timescaledb-toolkit-pg16 --link /usr/local/lib/postgresql/timescaled
 COPY --from=timescaledb-toolkit-pg16 --link /usr/local/share/postgresql/extension/timescaledb_toolkit* /usr/share/postgresql16/extension/
 
 # Add compatibility librarties for timescaledb toolkit
+# hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add \
