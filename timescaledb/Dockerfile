@@ -5,19 +5,19 @@ ARG ALPINE_VERSION=3.20
 
 # Define the versions for all components of the addon
 # These images are all prebuild, otherwise building the docker images takes waaaay to long
-FROM timescale/timescaledb:2.16.1-pg15                                      as timescale-pg15
-FROM timescale/timescaledb:2.16.1-pg16                                      as timescale-pg16
+FROM timescale/timescaledb:2.16.1-pg15                                      AS timescale-pg15
+FROM timescale/timescaledb:2.16.1-pg16                                      AS timescale-pg16
 # hadolint ignore=DL3007
-FROM husselhans/hassos-addon-timescaledb-timescaledb-tools:latest           as timescaledb-tools
-FROM husselhans/hassos-addon-timescaledb-postgis-pg15:3.3.3                 as postgis-pg15
-FROM husselhans/hassos-addon-timescaledb-pgagent-pg16:4.2.2                 as pgagent-pg16
-FROM husselhans/hassos-addon-timescaledb-timescaledb-toolkit-pg16:1.18.0    as timescaledb-toolkit-pg16
+FROM husselhans/hassos-addon-timescaledb-timescaledb-tools:latest           AS timescaledb-tools
+FROM husselhans/hassos-addon-timescaledb-postgis-pg15:3.3.3                 AS postgis-pg15
+FROM husselhans/hassos-addon-timescaledb-pgagent-pg16:4.2.2                 AS pgagent-pg16
+FROM husselhans/hassos-addon-timescaledb-timescaledb-toolkit-pg16:1.18.0    AS timescaledb-toolkit-pg16
 
 ###########################################
 # Define base Image
 ###########################################
 # hadolint ignore=DL3006
-FROM $BUILD_FROM as addon
+FROM $BUILD_FROM AS addon
 ARG BUILD_ARCH
 ARG TARGETARCH=${BUILD_ARCH}
 ARG TARGETVARIANT
@@ -225,8 +225,8 @@ LABEL \
     org.opencontainers.image.authors="Hans van Essen <hans@expaso.nl>" \
     org.opencontainers.image.licenses="MIT" \
     org.opencontainers.image.url="https://hub.docker.com/repository/docker/husselhans/hassos-addon-timescaledb-${BUILD_ARCH}/general" \
-    org.opencontainers.image.source="https://github.com/Expaso/hassos-addon-timescaledb" \
-    org.opencontainers.image.documentation="https://github.com/Expaso/hassos-addon-timescaledb/blob/master/README.md" \
+    org.opencontainers.image.source="https://github.com/expaso/hassos-addon-timescaledb" \
+    org.opencontainers.image.documentation="https://github.com/expaso/hassos-addon-timescaledb/blob/master/README.md" \
     org.opencontainers.image.created=${BUILD_DATE} \
     org.opencontainers.image.revision=${BUILD_REF} \
     org.opencontainers.image.version=${BUILD_VERSION}
