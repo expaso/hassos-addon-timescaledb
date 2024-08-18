@@ -1,4 +1,5 @@
 # Home Assistant Add-on: [PostgreSQL](https://www.postgresql.org/) [TimescaleDB](https://www.timescale.com/)
+
 ## [PostgreSql 16.3](https://www.postgresql.org/) & [Postgis 3.4.2](https://postgis.net/) & [TimescaleDB 2.16.1](https://www.timescale.com/) & [TimescaleDB Toolkit 1.18.0](https://github.com/timescale/timescaledb-toolkit) & [pgAgent 4.2.2](https://www.pgadmin.org/docs/pgadmin4/development/pgagent.html)
 
 <a href="https://www.buymeacoffee.com/expaso" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
@@ -20,6 +21,7 @@ TimescaleDB is an open-source time-series database optimized for fast ingest and
 Compared to the trade-offs demanded by these two alternatives (relational vs. NoSQL), TimescaleDB offers the best of both worlds for time-series data:
 
 ### Easy to Use
+
 Full SQL interface for all SQL natively supported by PostgreSQL (including secondary indexes, non-time based aggregates, sub-queries, JOINs, window functions).
 
 - Connects to any client or tool that speaks PostgreSQL, no changes needed.
@@ -30,13 +32,13 @@ Full SQL interface for all SQL natively supported by PostgreSQL (including secon
 
 Say, you want put all those nice Home Assistant measurements from your smarthome to good use, and for example, use something like [Grafana](https://grafana.com) for your dashboards, and maybe [Prometheus](https://prometheus.io/) for monitoring..
 
-__That means you need a decent time-series database.__
+**That means you need a decent time-series database.**
 
 You could use [InfluxDB](www.influxdata.com) for this.
 This works pretty good.. but.. being a NoSQL database, this means you have to learn Flux (it's query language). Once you get there, you will quickly discover that updating existing data in Influx is near impossible (without overwriting it). That's a bummer, since my data needed some 'tweaking'.
 
-For the Home Assistant recorder, you probaly need some SQL storage too. That means you also need to 
-bring stuff like MariaDb or Postgres to the table (unless you keep using the SqlLite database). 
+For the Home Assistant recorder, you probaly need some SQL storage too. That means you also need to
+bring stuff like MariaDb or Postgres to the table (unless you keep using the SqlLite database).
 
 So.. why not combine these?
 Seriously?! You ask...
@@ -75,7 +77,7 @@ Example add-on configuration:
  {
     "databases": ["homeassistant"],
     "timescale_enabled": ["homeassistant"],
-    "timescaledb": { 
+    "timescaledb": {
       "telemetry": "basic",
       "maxmemory": "512MB",
       "maxcpus": "4"
@@ -129,7 +131,6 @@ Setting this higher could lead to more memory usage.
 
 Example: `max_connections=30`
 
-
 #### Option: `system_packages`
 
 Advanced users only!
@@ -137,11 +138,10 @@ A list of extra alpine packages to iunstall during addon-startup.
 
 Example: ['nano']
 
-
 #### Option: `init_commands`
 
 Advanced users only!
-A list of extra commands to run during startup. 
+A list of extra commands to run during startup.
 
 To alter something in the postgresql.conf file for example:
 
@@ -150,7 +150,7 @@ Example: ['sed -i -e "/max_connections =/ s/= .*/= 50/" /data/postgres/postgresq
 #### Option: `retry_upgrade`
 
 Advanced users only!
-When set, the upgrade from Postgres 14 to 15 could be retryed if it failed mid-flight. 
+When set, the upgrade from Postgres 14 to 15 could be retryed if it failed mid-flight.
 Basically this will try to find the old database-files from Postgres 12, and restore them before trying to upgrade to Postgres 14 again.
 
 !! Please don't set this if you don't know what you are doing or before taking a backup. !!
@@ -167,6 +167,7 @@ docker pull husselhans/hassos-addon-timescaledb-armv7:latest
 docker pull husselhans/hassos-addon-timescaledb-armhf:latest
 docker pull husselhans/hassos-addon-timescaledb-i386:latest
 ```
+
 You can replace latest with the version number you want to use.
 
 Simply start it like this:
@@ -175,7 +176,7 @@ Simply start it like this:
 docker run \
   --rm \
   --name timescaledb \
-  --v ${PWD}/timescaledb_addon_data:/data \ 
+  --v ${PWD}/timescaledb_addon_data:/data \
   -p 5432:5432 \
   husselhans/hassos-addon-timescaledb-amd64:dev
 ```
@@ -188,7 +189,7 @@ If you want to start the container as a daemon, simply remove the `--rm` option 
 docker run \
   -d \
   --name timescaledb \
-  --v ${PWD}/timescaledb_addon_data:/data \ 
+  --v ${PWD}/timescaledb_addon_data:/data \
   -p 5432:5432 \
   husselhans/hassos-addon-timescaledb-amd64:dev
 ```
@@ -202,7 +203,7 @@ Seeking a nice web-based client? **Try the pgAdmin4 addon.**
 Please do not forget to also map the TCP/IP port in the network-section of the addon to the desired port number.
 The default is port `5432`
 
-__Securiy Notice!__
+**Securiy Notice!**
 
 The default username is `postgres` with password `homeassistant`.
 Make sure you change this immediately after activating the add-on:
@@ -230,7 +231,3 @@ Well.. Dive in!
 You can read additional documentation on how you van work with your data and Grafana here:
 
 https://github.com/Expaso/hassos-addons/issues/1
-
-
-
-

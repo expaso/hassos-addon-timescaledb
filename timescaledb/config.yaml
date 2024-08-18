@@ -1,16 +1,18 @@
+---
 name: TimescaleDB
 version: dev
 stage: stable
 slug: timescaledb
-description: An open-source database built on PostgreSQL for analyzing time-series data with the power and convenience of SQL
+description: "An open-source database built on PostgreSQL for
+  analyzing time-series data with the power and convenience of SQL"
 url: https://github.com/Expaso/hassos-addon-timescaledb
+codenotary: hans@expaso.nl
 arch:
   - armhf
   - aarch64
   - amd64
   - armv7
   - i386
-#codenotary: hans@expaso.nl
 startup: system
 boot: auto
 init: false
@@ -25,7 +27,8 @@ breaking_versions:
 ports:
   5432/tcp:
 ports_description:
-  5432/tcp: PostgreSQL Port. Beware! This port may already be in use. Choose another port-number if the add-on won't start.
+  5432/tcp: "PostgreSQL Port. Beware! This port may already be in use.
+    Choose another port-number if the add-on won't start."
 options:
   databases:
     - homeassistant

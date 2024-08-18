@@ -40,13 +40,13 @@ function build_dependency() {
 
     docker buildx build \
         --push \
-        --platform linux/amd64,linux/arm64,linux/arm/v7,linux/i386,linux/arm/v6 \
-        --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb-${component}:cache \
-        --cache-to type=registry,ref=husselhans/hassos-addon-timescaledb-${component}:cache,mode=max \
-        --tag husselhans/hassos-addon-timescaledb-${component}:${version} \
+        --platform "linux/amd64,linux/arm64,linux/arm/v7,linux/i386,linux/arm/v6" \
+        --cache-from "type=registry,ref=husselhans/hassos-addon-timescaledb-${component}:cache" \
+        --cache-to "type=registry,ref=husselhans/hassos-addon-timescaledb-${component}:cache,mode=max" \
+        --tag "husselhans/hassos-addon-timescaledb-${component}:${version}" \
         --progress plain \
         --build-arg "VERSION=${version}" \
-        --file ./timescaledb/docker-dependencies/${component} \
+        --file "./timescaledb/docker-dependencies/${component}" \
         . \
         && printInColor "Done building docker image!" "green"    
 }
@@ -65,12 +65,13 @@ function build() {
         --tag husselhans/hassos-addon-timescaledb-aarch64:dev \
         --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:16.2.1 \
         --progress plain \
-        --build-arg CACHE_BUST=$(date +%s) \
-        --output ${output} \
+        --build-arg CACHE_BUST="$(date +%s)" \
+        --output "${output}" \
         ./timescaledb \
         && printInColor "Done building docker image!" "green"
 
     #Stop when an error occured
+    # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
         printInColor "Error building docker image!" "red"
         exit 1
@@ -109,8 +110,8 @@ function release() {
     for platform in $platforms; do
         printInColor "Releasing platform ${platform} with tag ${tag}.."
 
-        docker tag husselhans/hassos-addon-timescaledb-${platform}:latest husselhans/hassos-addon-timescaledb-${platform}:${tag}
-        docker push husselhans/hassos-addon-timescaledb-${platform}:${tag}
+        docker tag "husselhans/hassos-addon-timescaledb-${platform}:latest" "husselhans/hassos-addon-timescaledb-${platform}:${tag}"
+        docker push "husselhans/hassos-addon-timescaledb-${platform}:${tag}"
     done
 }
 
@@ -124,6 +125,29 @@ function inspect() {
 }
 
 function build_ha() {
+    local tag=$1
+    printInColor "Building all platforms for Home Assistant using HJomeAssistant builder with tag ${tag}"
+
+    docker login
+    docker run \
+        --rm \
+        --privileged \
+        -v ~/.docker:/root/.docker \
+        -v /var/run/docker.sock:/var/run/docker.sock:ro \
+        -v "${PWD}/timescaledb:/data" \
+        homeassistant/amd64-builder \
+        --target timescaledb \
+        --cosign \
+        --all \
+        -v "${tag}" \
+        -t /data \
+        --self-cache
+    
+        # --docker-user husselhans \
+        # --docker-password ***REMOVED***
+}
+
+function build_ha_buildx() {
     local tag=$1
     printInColor "Building all platforms for Home Assistant with tag ${tag}"
 
@@ -151,7 +175,7 @@ function build_ha() {
             --platform "${docker_platform}" \
             --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb:cache \
             --cache-to type=registry,ref=husselhans/hassos-addon-timescaledb:cache,mode=max \
-            --tag husselhans/hassos-addon-timescaledb-${platform}:${tag} \
+            --tag "husselhans/hassos-addon-timescaledb-${platform}:${tag}" \
             --build-arg "BUILD_FROM=${build_from}" \
             --build-arg "BUILD_ARCH=${platform}" \
             --build-arg "VERSION=${tag}" \
@@ -161,51 +185,48 @@ function build_ha() {
             && printInColor "Done building docker image!" "green"
     done
 
-
-    #docker login
-    # docker run \
-    #     --rm \
-    #     --privileged \
-    #     -v ~/.docker:/root/.docker \
-    #     -v /var/run/docker.sock:/var/run/docker.sock:ro \
-    #     -v ${PWD}/timescaledb:/data \
-    #     homeassistant/amd64-builder \
-    #     --target timescaledb \
-    #     --armhf \
-    #     -v ${tag} \
-    #     -t /data \
-    #     --docker-user husselhans \
-    #     --docker-password ***REMOVED***
 }
 
 if [ "$1" == "build" ]; then
     build "type=registry,push=true"
     exit 0
+
 elif [ "$1" == "build-dependencies" ]; then
     build_dependency timescaledb-tools "latest"
     build_dependency pgagent-pg16 "4.2.2"
     build_dependency timescaledb-toolkit-pg16 "1.18.0"
     build_dependency postgis-pg15 "3.4.2"
     exit 0
+
 elif [ "$1" == "build-ha" ]; then
     build_ha latest
     exit 0
+
+elif [ "$1" == "build-ha-buildx" ]; then
+    build_ha_buildx latest
+    exit 0
+
 elif [ "$1" == "run-hassos" ]; then
     build "type=registry,push=true"
     run_hassos
     exit 0
+
 elif [ "$1" == "debug" ]; then
     build type=docker
     run_local
     exit 0
+
 elif [ "$1" == "inspect" ]; then
-    #build type=docker
-    inspect $2
+    # build type=docker
+    inspect "$2"
     exit 0
+
 elif [ "$1" == "release" ]; then
-    release $2
+    release "$2"
     exit 0
+
 else
     printInColor "Unknown command!" "red"
     exit 1
+
 fi

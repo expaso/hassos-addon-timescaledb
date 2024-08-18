@@ -8,4 +8,4 @@
 # Usage: ./test.sh
 
 echo "Running act.."
-act release -s GITHUB_TOKEN=$(gh auth token) -s PERSONAL_ACCESS_TOKEN=$(gh auth token) -e ./.github/act/release.json
+act release -s GITHUB_TOKEN="$(gh auth token)" -s PERSONAL_ACCESS_TOKEN="$(gh auth token)" -e ./.github/act/release.json
