@@ -1,7 +1,6 @@
 ---
 name: TimescaleDB
 version: dev
-stage: stable
 slug: timescaledb
 description: "An open-source database built on PostgreSQL for
   analyzing time-series data with the power and convenience of SQL"
@@ -14,7 +13,6 @@ arch:
   - armv7
   - i386
 startup: system
-boot: auto
 init: false
 tmpfs: true
 map:
@@ -22,8 +20,6 @@ map:
   - backup:rw
   - media:rw
 timeout: 60
-breaking_versions:
-  - 4.0.0
 ports:
   5432/tcp:
 ports_description:
