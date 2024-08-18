@@ -62,7 +62,7 @@ This could come in handy if you want to use a more powerfull machine for your da
 To install this Hass.io add-on you need to add the Expase add-on repository
 first:
 
-You can do this by navigating to the "Add-on Store" tab in the Supervisor panel and then entering https://github.com/Expaso/hassos-addons in the "Add new repository by URL" field.
+You can do this by navigating to the "Add-on Store" tab in the Supervisor panel and then entering https://github.com/expaso/hassos-addons in the "Add new repository by URL" field.
 
 Now scroll down and select the "TimeScaleDb" add-on.
 Press install to download the add-on and unpack it on your machine. This can take some time.
@@ -230,4 +230,4 @@ Well.. Dive in!
 
 You can read additional documentation on how you van work with your data and Grafana here:
 
-https://github.com/Expaso/hassos-addons/issues/1
+https://github.com/expaso/hassos-addons/issues/1

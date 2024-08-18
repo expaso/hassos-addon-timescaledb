@@ -4,7 +4,7 @@ version: dev
 slug: timescaledb
 description: "An open-source database built on PostgreSQL for
   analyzing time-series data with the power and convenience of SQL"
-url: https://github.com/Expaso/hassos-addon-timescaledb
+url: https://github.com/expaso/hassos-addon-timescaledb
 codenotary: hans@expaso.nl
 arch:
   - armhf
