@@ -53,4 +53,4 @@ schema:
   init_commands:
     - str
   retry_upgrade: bool?
-image: husselhans/hassos-addon-timescaledb-{arch}
+image: ghcr.io/expaso/timescaledb/{arch}
