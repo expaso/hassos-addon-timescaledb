@@ -151,10 +151,10 @@ function build_ha_buildx() {
     local tag=$1
     printInColor "Building all platforms for Home Assistant with tag ${tag}"
 
-    #Get all platforms from /timescaledb/config.yaml
+    # Get all platforms from /timescaledb/config.yaml
     platforms=$(yq -r '.arch[]' ./timescaledb/config.yaml)
 
-    #And loop through them
+    # And loop through them
     for platform in $platforms; do
 
         # Get the value from timescaledb/build.yaml by looking it up in the build_from dictionary, whereby the key value of the list is the platform.
