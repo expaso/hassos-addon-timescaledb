@@ -3,7 +3,7 @@
   "release": {
     "body": "- 🐛 Fixed a bug\r\n- 🚀 Added New Feature",
     "draft": false,
-    "prerelease": false,
+    "prerelease": true,
     "tag_name": "v3.0.0"
   }
 }
