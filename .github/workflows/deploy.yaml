@@ -6,8 +6,6 @@ on:
   release:
     types:
       - published
-      - edited
-      - deleted
   workflow_run:
     workflows: ["CI"]
     branches: [main]
