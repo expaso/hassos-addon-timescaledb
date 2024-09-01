@@ -223,8 +223,8 @@ LABEL \
     org.opencontainers.image.description="Home Assistant Add-on: TimescaleDb" \
     org.opencontainers.image.vendor="Expaso BV" \
     org.opencontainers.image.authors="Hans van Essen <hans@expaso.nl>" \
-    org.opencontainers.image.licenses="MIT" \
-    org.opencontainers.image.url="https://hub.docker.com/repository/docker/husselhans/hassos-addon-timescaledb-${BUILD_ARCH}/general" \
+    org.opencontainers.image.licenses="Apache 2.0" \
+    org.opencontainers.image.url="https://ghcr.io/expaso/timescaledb/${BUILD_ARCH}:" \
     org.opencontainers.image.source="https://github.com/expaso/hassos-addon-timescaledb" \
     org.opencontainers.image.documentation="https://github.com/expaso/hassos-addon-timescaledb/blob/master/README.md" \
     org.opencontainers.image.created=${BUILD_DATE} \
