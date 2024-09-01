@@ -186,6 +186,7 @@ COPY --from=timescaledb-tools /go/bin/* /usr/local/bin/
 # --------------------------------------
 ARG SYSTEM_STATS_VERSION=v3.2
 RUN mkdir -p /build
+# hadolint ignore=DL3018, DL3003
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk update \
