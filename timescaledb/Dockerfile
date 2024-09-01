@@ -8,10 +8,10 @@ ARG ALPINE_VERSION=3.20
 FROM timescale/timescaledb:2.16.1-pg15                                      AS timescale-pg15
 FROM timescale/timescaledb:2.16.1-pg16                                      AS timescale-pg16
 # hadolint ignore=DL3007
-FROM ghcr.io/expaso/timescaledb/timescaledb-tools:latest           AS timescaledb-tools
-FROM ghcr.io/expaso/timescaledb/postgis-pg15:3.3.3                 AS postgis-pg15
-FROM ghcr.io/expaso/timescaledb/pgagent-pg16:4.2.2                 AS pgagent-pg16
-FROM ghcr.io/expaso/timescaledb/timescaledb-toolkit-pg16:1.18.0    AS timescaledb-toolkit-pg16
+FROM husselhans/hassos-addon-timescaledb-timescaledb-tools:latest           AS timescaledb-tools
+FROM husselhans/hassos-addon-timescaledb-postgis-pg15:3.3.3                 AS postgis-pg15
+FROM husselhans/hassos-addon-timescaledb-pgagent-pg16:4.2.2                 AS pgagent-pg16
+FROM husselhans/hassos-addon-timescaledb-timescaledb-toolkit-pg16:1.18.0    AS timescaledb-toolkit-pg16
 
 ###########################################
 # Define base Image
