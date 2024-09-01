@@ -100,11 +100,11 @@ In this case, you need to have a working Docker installation on your machine.
 pull one of the images for the desired architecture from docker hub:
 
 ```
-docker pull husselhans/hassos-addon-timescaledb-amd64:latest
-docker pull husselhans/hassos-addon-timescaledb-aarch64:latest
-docker pull husselhans/hassos-addon-timescaledb-armv7:latest
-docker pull husselhans/hassos-addon-timescaledb-armhf:latest
-docker pull husselhans/hassos-addon-timescaledb-i386:latest
+docker pull ghcr.io/expaso/timescaledb/amd64:stable
+docker pull ghcr.io/expaso/timescaledb/aarch64:stable
+docker pull ghcr.io/expaso/timescaledb/armv7:stable
+docker pull ghcr.io/expaso/timescaledb/armhf:stable
+docker pull ghcr.io/expaso/timescaledb/i386:stable
 ```
 
 You can replace latest with the version number you want to use.
@@ -117,7 +117,7 @@ docker run \
   --name timescaledb \
   --v ${PWD}/timescaledb_addon_data:/data \
   -p 5432:5432 \
-  husselhans/hassos-addon-timescaledb-amd64:dev
+  ghcr.io/expaso/timescaledb/amd64:dev
 ```
 
 This will use ~/timescaledb_addon_data as the data directory for the container, and map the port 5432 to the host.
@@ -130,7 +130,7 @@ docker run \
   --name timescaledb \
   --v ${PWD}/timescaledb_addon_data:/data \
   -p 5432:5432 \
-  husselhans/hassos-addon-timescaledb-amd64:dev
+  ghcr.io/expaso/timescaledb/amd64:dev
 ```
 
 ## Usage

@@ -21,7 +21,7 @@ Here are the commands explained:
 To build the lastest version using local docker, switch to the folder where the `dockerfile` resides, and run:
 
 ```
-docker build --platform linux/aarch64 --tag husselhans/hassos-addon-timescaledb-aarch64:dev .
+docker build --platform linux/aarch64 --tag ghcr.io/expaso/timescaledb/aarch64:dev .
 ```
 
 The dockerfile already contains the default build architecture and the default base image:
@@ -51,7 +51,7 @@ This will use the base images from the `build.yaml` file, and the architecture s
 
 ## Push latest DEV image to repository
 
-docker image push husselhans/hassos-addon-timescaledb-aarch64:dev
+docker image push ghcr.io/expaso/timescaledb/aarch64:dev
 
 ## Pull latest DEV image into your raspoberry pi
 
@@ -59,7 +59,7 @@ SSH to a home assistant: `ssh -i hassos -l root -p 22222 10.50.1.104`
 From a system SSH (port 22222):
 
 ```
-docker image pull husselhans/hassos-addon-timescaledb-aarch64:dev
+docker image pull ghcr.io/expaso/timescaledb/aarch64:dev
 ```
 
 ## Run the addon with an interactive shell
@@ -67,13 +67,13 @@ docker image pull husselhans/hassos-addon-timescaledb-aarch64:dev
 From a system SSH (port 22222), run the docker container with data attached:
 
 ```
-docker run -it --entrypoint "/bin/sh" -v /mnt/data/supervisor/addons/data/local_timescaledb/:/data:rw  husselhans/hassos-addon-timescaledb-aarch64:dev
+docker run -it --entrypoint "/bin/sh" -v /mnt/data/supervisor/addons/data/local_timescaledb/:/data:rw  ghcr.io/expaso/timescaledb/aarch64:dev
 ```
 
 ## For simple DEV inspection, run the container with a shell
 
 ```
-docker run -it --entrypoint "/bin/sh" husselhans/hassos-addon-timescaledb-aarch64:dev
+docker run -it --entrypoint "/bin/sh" ghcr.io/expaso/timescaledb/aarch64:dev
 ```
 
 ## OR attach to a running container

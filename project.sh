@@ -41,9 +41,9 @@ function build_dependency() {
     docker buildx build \
         --push \
         --platform "linux/amd64,linux/arm64,linux/arm/v7,linux/i386,linux/arm/v6" \
-        --cache-from "type=registry,ref=husselhans/hassos-addon-timescaledb-${component}:cache" \
-        --cache-to "type=registry,ref=husselhans/hassos-addon-timescaledb-${component}:cache,mode=max" \
-        --tag "husselhans/hassos-addon-timescaledb-${component}:${version}" \
+        --cache-from "type=registry,ref=ghcr.io/expaso/timescaledb/${component}:cache" \
+        --cache-to "type=registry,ref=ghcr.io/expaso/timescaledb/${component}:cache,mode=max" \
+        --tag "ghcr.io/expaso/timescaledb/${component}:${version}" \
         --progress plain \
         --build-arg "VERSION=${version}" \
         --file "./timescaledb/docker-dependencies/${component}" \
@@ -62,7 +62,7 @@ function build() {
     docker buildx build \
         --platform ${PLATFORM} \
         --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb:cache \
-        --tag husselhans/hassos-addon-timescaledb-aarch64:dev \
+        --tag ghcr.io/expaso/timescaledb/aarch64:dev \
         --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:16.2.1 \
         --progress plain \
         --build-arg CACHE_BUST="$(date +%s)" \
@@ -85,7 +85,7 @@ function run_hassos() {
     # # Copy the docker image to hassos
     # printInColor "Pulling docker image on hassos.." "yellow"
     # # run the docker image pull command remote on Hassos
-    ssh -i ~/.ssh/hassos -l root -p 22222 homeassistant "docker image pull husselhans/hassos-addon-timescaledb-aarch64:dev \
+    ssh -i ~/.ssh/hassos -l root -p 22222 homeassistant "docker image pull ghcr.io/expaso/timescaledb/aarch64:dev \
         && ha addons stop  local_timescaledb  \
         && ha addons start local_timescaledb"
     printInColor "Done pulling docker image on hassos!" "green"
@@ -96,7 +96,7 @@ function run_local() {
 
     # Run the docker image locally
     mkdir -p /tmp/timescale_data
-    docker run --rm --name timescaledb --platform ${PLATFORM} -v /tmp/timescale_data:/data -p 5432:5432 husselhans/hassos-addon-timescaledb-aarch64:dev  
+    docker run --rm --name timescaledb --platform ${PLATFORM} -v /tmp/timescale_data:/data -p 5432:5432 ghcr.io/expaso/timescaledb/aarch64:dev  
 }
 
 function release() {
@@ -110,8 +110,8 @@ function release() {
     for platform in $platforms; do
         printInColor "Releasing platform ${platform} with tag ${tag}.."
 
-        docker tag "husselhans/hassos-addon-timescaledb-${platform}:latest" "husselhans/hassos-addon-timescaledb-${platform}:${tag}"
-        docker push "husselhans/hassos-addon-timescaledb-${platform}:${tag}"
+        docker tag "ghcr.io/expaso/timescaledb/${platform}:latest" "ghcr.io/expaso/timescaledb/${platform}:${tag}"
+        docker push "ghcr.io/expaso/timescaledb/${platform}:${tag}"
     done
 }
 
@@ -121,7 +121,7 @@ function inspect() {
 
     # Run the docker image locally
     mkdir -p /tmp/timescale_data
-    docker run --entrypoint "/bin/ash" -it --rm --name timescaledb --platform ${PLATFORM} -v /tmp/timescale_data:/data -p 5432:5432 husselhans/hassos-addon-timescaledb-aarch64:dev
+    docker run --entrypoint "/bin/ash" -it --rm --name timescaledb --platform ${PLATFORM} -v /tmp/timescale_data:/data -p 5432:5432 ghcr.io/expaso/timescaledb/aarch64:dev
 }
 
 function build_ha() {
@@ -175,7 +175,7 @@ function build_ha_buildx() {
             --platform "${docker_platform}" \
             --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb:cache \
             --cache-to type=registry,ref=husselhans/hassos-addon-timescaledb:cache,mode=max \
-            --tag "husselhans/hassos-addon-timescaledb-${platform}:${tag}" \
+            --tag "ghcr.io/expaso/timescaledb/${platform}:${tag}" \
             --build-arg "BUILD_FROM=${build_from}" \
             --build-arg "BUILD_ARCH=${platform}" \
             --build-arg "VERSION=${tag}" \
