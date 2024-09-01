@@ -142,9 +142,6 @@ function build_ha() {
         -v "${tag}" \
         -t /data \
         --self-cache
-    
-        # --docker-user husselhans \
-        # --docker-password ***REMOVED***
 }
 
 function build_ha_buildx() {
@@ -192,10 +189,11 @@ if [ "$1" == "build" ]; then
     exit 0
 
 elif [ "$1" == "build-dependencies" ]; then
-    build_dependency timescaledb-tools "latest"
-    build_dependency pgagent-pg16 "4.2.2"
-    build_dependency timescaledb-toolkit-pg16 "1.18.0"
-    build_dependency postgis-pg15 "3.4.2"
+    # build_dependency timescaledb-tools "latest"
+    # build_dependency pgagent-pg16 "4.2.2"
+    # build_dependency timescaledb-toolkit-pg16 "1.18.0"
+    # build_dependency postgis-pg15 "3.4.2"
+    build_dependency postgresql-extension-system-stat-pg16 "3.2"
     exit 0
 
 elif [ "$1" == "build-ha" ]; then

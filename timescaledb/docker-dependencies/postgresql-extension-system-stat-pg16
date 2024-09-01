@@ -1,0 +1,33 @@
+FROM timescale/timescaledb:latest-pg16
+ARG VERSION=3.2
+
+RUN mkdir -p /build
+
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    && apk update \
+    && apk add --virtual .fetch-deps \
+                ca-certificates \
+                git \
+                openssl \
+                openssl-dev \
+                tar \
+        && apk add -u musl \
+    && apk add --virtual .build-deps \
+                coreutils \
+                gcc \
+                make \
+                cmake \
+				build-base \
+				boost-dev \
+				openldap-dev \
+    && git clone https://github.com/postgres/pgagent /build/system-stat \
+        && cd /build/system-stat \
+        && git checkout v${VERSION}
+
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    PATH="/usr/local/pgsql/bin:$PATH" make USE_PGXS=1 \
+    && PATH="/usr/local/pgsql/bin:$PATH" make install USE_PGXS=1 \
+    && apk del .fetch-deps .build-deps \
+        && rm -rf /build
