@@ -1,6 +1,6 @@
 # Home Assistant Add-on: [PostgreSQL](https://www.postgresql.org/) [TimescaleDB](https://www.timescale.com/)
 
-## [PostgreSql 16.3](https://www.postgresql.org/) & [Postgis 3.4.2](https://postgis.net/) & [TimescaleDB 2.16.1](https://www.timescale.com/) & [TimescaleDB Toolkit 1.18.0](https://github.com/timescale/timescaledb-toolkit) & [pgAgent 4.2.2](https://www.pgadmin.org/docs/pgadmin4/development/pgagent.html)
+## [PostgreSql](https://www.postgresql.org/) & [Postgis](https://postgis.net/) & [TimescaleDB](https://www.timescale.com/) & [TimescaleDB Toolkit](https://github.com/timescale/timescaledb-toolkit) & [pgAgent](https://www.pgadmin.org/docs/pgadmin4/development/pgagent.html)
 
 <a href="https://www.buymeacoffee.com/expaso" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
 
@@ -68,92 +68,6 @@ Now scroll down and select the "TimeScaleDb" add-on.
 Press install to download the add-on and unpack it on your machine. This can take some time.
 
 Start the add-on, check the logs of the add-on to see if everything went well.
-
-#### Configuation
-
-Example add-on configuration:
-
-```
- {
-    "databases": ["homeassistant"],
-    "timescale_enabled": ["homeassistant"],
-    "timescaledb": {
-      "telemetry": "basic",
-      "maxmemory": "512MB",
-      "maxcpus": "4"
-      },
-      "max_connections": 20,
-      "system_packages": [],
-      "init_commands": []
- }
-```
-
-#### Option: `databases`
-
-Sets a list of database-names that will be created for you, once you start the add-on.
-You can also create databases on your own ofcourse, using a psql client of your choice.
-
-#### Option: `timescale_enabled`
-
-Sets a list of database-names where the timescale-extentions will be enabled for.
-Databases not in this list will act like normal Postgre databases.
-
-#### Option: `timescaledb.telemetry`
-
-Switches the telemetry of TimescaleDb on or off.
-Valid options are: 'basic' or 'off'.
-See: https://docs.timescale.com/latest/using-timescaledb/telemetry
-
-#### Option: `timescaledb.maxmemory`
-
-Sets the maximum amount of memory that PostgreSQL will claim.
-It's important to leave breathing room for other processes on your machine (or raspberry pi), so set these level not too high (say max 50% of your total ram).
-
-Example: `maxmemory="1024MB"`
-Or leave empty for accepting auto-tune.
-
-#### Option: `timescaledb.maxcpu`
-
-Sets the maximum number of cores that PostgreSQL will use.
-It's important to leave breathing room for other processes on your machine (or raspberry pi), so set these level not too high (say max 75% of your total number of cores).
-
-Example: `maxcpu="2"`
-Or leave empty for accepting auto-tune.
-
-See also:
-https://docs.timescale.com/latest/getting-started/configuring
-for further tuning. Your Postgres.config file is located in the addon's data directory.
-
-#### Option: `max_connections`
-
-Sets the maximum number of connections that PostgreSql will accept.
-Setting this higher could lead to more memory usage.
-
-Example: `max_connections=30`
-
-#### Option: `system_packages`
-
-Advanced users only!
-A list of extra alpine packages to iunstall during addon-startup.
-
-Example: ['nano']
-
-#### Option: `init_commands`
-
-Advanced users only!
-A list of extra commands to run during startup.
-
-To alter something in the postgresql.conf file for example:
-
-Example: ['sed -i -e "/max_connections =/ s/= .*/= 50/" /data/postgres/postgresql.conf']
-
-#### Option: `retry_upgrade`
-
-Advanced users only!
-When set, the upgrade from Postgres 14 to 15 could be retryed if it failed mid-flight.
-Basically this will try to find the old database-files from Postgres 12, and restore them before trying to upgrade to Postgres 14 again.
-
-!! Please don't set this if you don't know what you are doing or before taking a backup. !!
 
 ### Running the container standalone.
 
