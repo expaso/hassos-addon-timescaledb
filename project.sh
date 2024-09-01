@@ -61,7 +61,7 @@ function build() {
     # build the image
     docker buildx build \
         --platform ${PLATFORM} \
-        --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb:cache \
+        --cache-from type=registry,ref=ghcr.io/expaso/timescaledb:cache \
         --tag ghcr.io/expaso/timescaledb/aarch64:dev \
         --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:16.2.1 \
         --progress plain \
@@ -124,27 +124,7 @@ function inspect() {
     docker run --entrypoint "/bin/ash" -it --rm --name timescaledb --platform ${PLATFORM} -v /tmp/timescale_data:/data -p 5432:5432 ghcr.io/expaso/timescaledb/aarch64:dev
 }
 
-function build_ha() {
-    local tag=$1
-    printInColor "Building all platforms for Home Assistant using HJomeAssistant builder with tag ${tag}"
-
-    docker login
-    docker run \
-        --rm \
-        --privileged \
-        -v ~/.docker:/root/.docker \
-        -v /var/run/docker.sock:/var/run/docker.sock:ro \
-        -v "${PWD}/timescaledb:/data" \
-        homeassistant/amd64-builder \
-        --target timescaledb \
-        --cosign \
-        --all \
-        -v "${tag}" \
-        -t /data \
-        --self-cache
-}
-
-function build_ha_buildx() {
+function build_buildx() {
     local tag=$1
     printInColor "Building all platforms for Home Assistant with tag ${tag}"
 
@@ -170,8 +150,8 @@ function build_ha_buildx() {
 
         docker buildx build \
             --platform "${docker_platform}" \
-            --cache-from type=registry,ref=husselhans/hassos-addon-timescaledb:cache \
-            --cache-to type=registry,ref=husselhans/hassos-addon-timescaledb:cache,mode=max \
+            --cache-from type=registry,ref=ghcr.io/expaso/timescaledb:cache \
+            --cache-to type=registry,ref=ghcr.io/expaso/timescaledb:cache,mode=max \
             --tag "ghcr.io/expaso/timescaledb/${platform}:${tag}" \
             --build-arg "BUILD_FROM=${build_from}" \
             --build-arg "BUILD_ARCH=${platform}" \
@@ -196,12 +176,8 @@ elif [ "$1" == "build-dependencies" ]; then
     build_dependency postgresql-extension-system-stat-pg16 "3.2"
     exit 0
 
-elif [ "$1" == "build-ha" ]; then
-    build_ha latest
-    exit 0
-
-elif [ "$1" == "build-ha-buildx" ]; then
-    build_ha_buildx latest
+elif [ "$1" == "build-buildx" ]; then
+    build_buildx latest
     exit 0
 
 elif [ "$1" == "run-hassos" ]; then

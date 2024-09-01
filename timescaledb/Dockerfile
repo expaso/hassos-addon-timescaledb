@@ -181,6 +181,45 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 # Copy timescaledb-tools
 COPY --from=timescaledb-tools /go/bin/* /usr/local/bin/
 
+# --------------------------------------
+# System-Stats Extension
+# --------------------------------------
+ARG SYSTEM_STATS_VERSION=v3.2
+RUN mkdir -p /build
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    && apk update \
+    && apk add --virtual .fetch-deps \
+                ca-certificates \
+                git \
+                openssl \
+                openssl-dev \
+                tar \
+        && apk add -u musl \
+    && apk add --virtual .build-deps \
+                coreutils \
+                gcc \
+                make \
+                cmake \
+                build-base \
+                boost-dev \
+                openldap-dev \
+                clang15 \
+                llvm15 \
+    && git clone https://github.com/EnterpriseDB/system_stats.git /build/system-stats \
+        && cd /build/system-stats \
+        && git checkout ${SYSTEM_STATS_VERSION}
+
+WORKDIR /build/system-stats
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    && PATH=/usr/local/pgsql/bin:$PATH make USE_PGXS=1 \
+    && PATH=/usr/local/pgsql/bin:$PATH make install USE_PGXS=1 \
+    && apk del .fetch-deps .build-deps \
+        && rm -rf /build
+WORKDIR /
+    
+
 ###########################################
 # Finalize Image
 ###########################################
