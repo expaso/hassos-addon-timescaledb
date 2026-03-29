@@ -1,7 +1,7 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:17.2.5
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:18.2.1
 ARG BUILD_ARCH=aarch64
 
-ARG ALPINE_VERSION=3.21
+ARG ALPINE_VERSION=3.22
 
 # Define the versions for all components of the addon
 # These images are all prebuild, otherwise building the docker images takes waaaay to long
@@ -9,18 +9,24 @@ ARG ALPINE_VERSION=3.21
 # possible we won't mention the latest version here.
 FROM timescale/timescaledb:2.26.0-pg16                                          AS timescale-pg16
 FROM timescale/timescaledb:2.26.0-pg17                                          AS timescale-pg17
+FROM timescale/timescaledb:2.26.0-pg18                                          AS timescale-pg18
 
 # hadolint ignore=DL3007
 FROM ghcr.io/expaso/timescaledb/dependency/timescaledb-tools:latest                    AS timescaledb-tools
 FROM ghcr.io/expaso/timescaledb/dependency/pgagent-pg16:pgagent-4.2.3                  AS pgagent-pg16
 FROM ghcr.io/expaso/timescaledb/dependency/pgagent-pg17:pgagent-4.2.3                  AS pgagent-pg17
+FROM ghcr.io/expaso/timescaledb/dependency/pgagent-pg18:pgagent-4.2.3                  AS pgagent-pg18
 FROM ghcr.io/expaso/timescaledb/dependency/postgis-pg16:3.6.2                          AS postgis-pg16
 FROM ghcr.io/expaso/timescaledb/dependency/postgis-pg17:3.6.2                          AS postgis-pg17
+FROM ghcr.io/expaso/timescaledb/dependency/postgis-pg18:3.6.2                          AS postgis-pg18
 FROM ghcr.io/expaso/timescaledb/dependency/timescaledb-toolkit-pg16:1.22.0             AS timescaledb-toolkit-pg16
 FROM ghcr.io/expaso/timescaledb/dependency/timescaledb-toolkit-pg17:1.22.0             AS timescaledb-toolkit-pg17
+FROM ghcr.io/expaso/timescaledb/dependency/timescaledb-toolkit-pg18:1.22.0             AS timescaledb-toolkit-pg18
 FROM ghcr.io/expaso/timescaledb/dependency/postgresql-extension-system-stat-pg16:3.2   AS system-stat-pg16
 FROM ghcr.io/expaso/timescaledb/dependency/postgresql-extension-system-stat-pg17:3.2   AS system-stat-pg17
+FROM ghcr.io/expaso/timescaledb/dependency/postgresql-extension-system-stat-pg18:3.2   AS system-stat-pg18
 FROM ghcr.io/expaso/timescaledb/dependency/pgvector-pg17:0.8.2                         AS pgvector-pg17
+FROM ghcr.io/expaso/timescaledb/dependency/pgvector-pg18:0.8.2                         AS pgvector-pg18
 
 
 ###########################################
@@ -67,7 +73,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
         postgresql16-contrib
 
 # -----------------------------------------
-# PostgreSql 17 (new)
+# PostgreSql 17 (old)
 # -----------------------------------------
 # hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
@@ -79,11 +85,24 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
         postgresql17-contrib-jit \
         postgresql17-contrib
 
-# Set default postgresql version to 17
+# -----------------------------------------
+# PostgreSql 18 (new)
+# -----------------------------------------
+# hadolint ignore=DL3018
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    && apk add \
+        postgresql18-jit \
+        postgresql18 \
+        postgresql18-dev \
+        postgresql18-contrib-jit \
+        postgresql18-contrib
+
+# Set default postgresql version to 18
 RUN rm /usr/libexec/postgresql \
-    && ln -s /usr/libexec/postgresql17 /usr/libexec/postgresql \
+    && ln -s /usr/libexec/postgresql18 /usr/libexec/postgresql \
     && rm /usr/share/postgresql \
-    && ln -s /usr/share/postgresql17 /usr/share/postgresql
+    && ln -s /usr/share/postgresql18 /usr/share/postgresql
 
 # Create it's run directory
 RUN mkdir -p /run/postgresql \
@@ -105,7 +124,7 @@ COPY --from=postgis-pg16 --link /usr/local/share/postgresql/contrib/postgis* /us
 COPY --from=postgis-pg16 --link /usr/local/share/postgresql/extension/postgis* /usr/share/postgresql16/extension/
 
 # -----------------------------------------
-# Extension Postgis pg-17 (new)
+# Extension Postgis pg-17 (old)
 # -----------------------------------------
 #Add required packages for runtime (see postgis dependencies)
 # hadolint ignore=DL3018
@@ -130,11 +149,11 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 # hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
-    && apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.21/community --allow-untrusted \
+    && apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.22/community --allow-untrusted \
         #postgis=3.5.0-r5 \
         gdal-driver-postgisraster \
     && \
-    apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.21/main \
+    apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.22/main \
         libturbojpeg
 
 # Postgis + Postgis-Raster
@@ -147,6 +166,19 @@ COPY --from=postgis-pg17 --link /usr/local/share/postgresql/contrib/postgis* /us
 COPY --from=postgis-pg17 --link /usr/local/share/postgresql/extension/postgis* /usr/share/postgresql17/extension/
 
 # -----------------------------------------
+# Extension Postgis pg-18 (new)
+# -----------------------------------------
+
+# Postgis + Postgis-Raster
+COPY --from=postgis-pg18 --link /usr/local/lib/postgresql/postgis* /usr/lib/postgresql18/
+
+COPY --from=postgis-pg18 --link /usr/local/lib/postgresql/bitcode/postgis-3/* /usr/lib/postgresql18/bitcode/postgis-3/
+COPY --from=postgis-pg18 --link /usr/local/lib/postgresql/bitcode/postgis_raster-3/* /usr/lib/postgresql18/bitcode/postgis_raster-3/
+
+COPY --from=postgis-pg18 --link /usr/local/share/postgresql/contrib/postgis* /usr/share/postgresql18/contrib/
+COPY --from=postgis-pg18 --link /usr/local/share/postgresql/extension/postgis* /usr/share/postgresql18/extension/
+
+# -----------------------------------------
 # Extension Timescale pg-16 (old)
 # -----------------------------------------
 # Copy the new timescale version to the old postgresql version
@@ -154,21 +186,34 @@ COPY --from=timescale-pg16 --link /usr/local/lib/postgresql/timescaledb*.so /usr
 COPY --from=timescale-pg16 --link /usr/local/share/postgresql/extension/timescaledb* /usr/share/postgresql16/extension/
 
 # -----------------------------------------
-# Extension Timescale pg-17 (new)
+# Extension Timescale pg-17 (old)
 # -----------------------------------------
-# Copy the new timescale version to the new postgresql version
+# Copy the timescale version to the old postgresql version
 COPY --from=timescale-pg17 --link /usr/local/lib/postgresql/timescaledb*.so /usr/lib/postgresql17/
 COPY --from=timescale-pg17 --link /usr/local/share/postgresql/extension/timescaledb* /usr/share/postgresql17/extension/
 
-# --------------------------------------------
-# Extension pgAgent pg-17 (new)
-# --------------------------------------------
+# -----------------------------------------
+# Extension Timescale pg-18 (new)
+# -----------------------------------------
 # Copy the new timescale version to the new postgresql version
+COPY --from=timescale-pg18 --link /usr/local/lib/postgresql/timescaledb*.so /usr/lib/postgresql18/
+COPY --from=timescale-pg18 --link /usr/local/share/postgresql/extension/timescaledb* /usr/share/postgresql18/extension/
+
+# --------------------------------------------
+# Extension pgAgent pg-17 (old)
+# --------------------------------------------
 COPY --from=pgagent-pg17 --link /usr/local/lib/postgresql/pgagent*.so /usr/lib/postgresql17/
 COPY --from=pgagent-pg17 --link /usr/local/share/postgresql/extension/pgagent* /usr/share/postgresql17/extension/
 
-COPY --from=pgagent-pg17 --link /usr/local/share/pgagent.sql /usr/local/share/
-COPY --from=pgagent-pg17 --link /usr/local/bin/pgagent /usr/local/bin/
+# --------------------------------------------
+# Extension pgAgent pg-18 (new)
+# --------------------------------------------
+# Copy the new pgagent version to the new postgresql version
+COPY --from=pgagent-pg18 --link /usr/local/lib/postgresql/pgagent*.so /usr/lib/postgresql18/
+COPY --from=pgagent-pg18 --link /usr/local/share/postgresql/extension/pgagent* /usr/share/postgresql18/extension/
+
+COPY --from=pgagent-pg18 --link /usr/local/share/pgagent.sql /usr/local/share/
+COPY --from=pgagent-pg18 --link /usr/local/bin/pgagent /usr/local/bin/
 
 # Add compatibility libraries
 # hadolint ignore=DL3018
@@ -185,11 +230,18 @@ COPY --from=timescaledb-toolkit-pg16 --link /usr/local/lib/postgresql/timescaled
 COPY --from=timescaledb-toolkit-pg16 --link /usr/local/share/postgresql/extension/timescaledb_toolkit* /usr/share/postgresql16/extension/
 
 # --------------------------------------
-# Extension Timescaledb-Toolkit pg17 (new)
+# Extension Timescaledb-Toolkit pg17 (old)
 # --------------------------------------
-# Copy new timescaledb-toolkit to new postgresql version
+# Copy timescaledb-toolkit to the old postgresql version
 COPY --from=timescaledb-toolkit-pg17 --link /usr/local/lib/postgresql/timescaledb_toolkit* /usr/lib/postgresql17/
 COPY --from=timescaledb-toolkit-pg17 --link /usr/local/share/postgresql/extension/timescaledb_toolkit* /usr/share/postgresql17/extension/
+
+# --------------------------------------
+# Extension Timescaledb-Toolkit pg18 (new)
+# --------------------------------------
+# Copy new timescaledb-toolkit to new postgresql version
+COPY --from=timescaledb-toolkit-pg18 --link /usr/local/lib/postgresql/timescaledb_toolkit* /usr/lib/postgresql18/
+COPY --from=timescaledb-toolkit-pg18 --link /usr/local/share/postgresql/extension/timescaledb_toolkit* /usr/share/postgresql18/extension/
 
 # Add compatibility libraries for timescaledb toolkit
 # hadolint ignore=DL3018
@@ -206,16 +258,28 @@ COPY --from=system-stat-pg16 --link /usr/local/lib/postgresql/system_stats*.so /
 COPY --from=system-stat-pg16 --link /usr/local/share/postgresql/extension/system_stats* /usr/share/postgresql16/extension/
 
 # --------------------------------------------
-# Extension System-Stat pg-17 (new)
+# Extension System-Stat pg-17 (old)
 # --------------------------------------------
 COPY --from=system-stat-pg17 --link /usr/local/lib/postgresql/system_stats*.so /usr/lib/postgresql17/
 COPY --from=system-stat-pg17 --link /usr/local/share/postgresql/extension/system_stats* /usr/share/postgresql17/extension/
 
 # --------------------------------------------
-# Extension pgVector pg-17 (new)
+# Extension System-Stat pg-18 (new)
+# --------------------------------------------
+COPY --from=system-stat-pg18 --link /usr/local/lib/postgresql/system_stats*.so /usr/lib/postgresql18/
+COPY --from=system-stat-pg18 --link /usr/local/share/postgresql/extension/system_stats* /usr/share/postgresql18/extension/
+
+# --------------------------------------------
+# Extension pgVector pg-17 (old)
 # --------------------------------------------
 COPY --from=pgvector-pg17 --link /usr/local/lib/postgresql/vector*.so /usr/lib/postgresql17/
 COPY --from=pgvector-pg17 --link /usr/local/share/postgresql/extension/vector* /usr/share/postgresql17/extension/
+
+# --------------------------------------------
+# Extension pgVector pg-18 (new)
+# --------------------------------------------
+COPY --from=pgvector-pg18 --link /usr/local/lib/postgresql/vector*.so /usr/lib/postgresql18/
+COPY --from=pgvector-pg18 --link /usr/local/share/postgresql/extension/vector* /usr/share/postgresql18/extension/
 
 # --------------------------------------
 # Timescaledb Tools (alwasys latest)
