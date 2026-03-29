@@ -270,6 +270,17 @@ else
 			exit 1
 		fi
 	fi
+
+	# Check if we need to upgrade from 17 to 18
+	if [[ $(< ${POSTGRES_DATA}/PG_VERSION) == "17" ]]; then
+		bashio::log.notice "A database upgrade is required from Postgres 17 -> 18"
+		if upgradePostgreSQL 17 18; then
+			bashio::log.notice "Upgrade was succesful"
+		else
+			bashio::log.error "Upgrade was not succesful."
+			exit 1
+		fi
+	fi
 fi
 
 bashio::log.info "done"
