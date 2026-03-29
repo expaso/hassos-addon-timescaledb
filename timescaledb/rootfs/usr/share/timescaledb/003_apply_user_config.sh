@@ -49,18 +49,31 @@ apply_postgresql_config() {
     fi
     
     bashio::log.info "Applying PostgreSQL configuration parameters..."
-    
-    # Get all keys from postgresql_config
-    for key in $(bashio::config 'postgresql_config | keys[]'); do
+
+    # Get the postgresql_config object as JSON, then iterate keys with jq
+    # Note: bashio::config does not support JQ pipe expressions (like '| keys[]'),
+    # so we retrieve the whole object and parse it with jq directly.
+    local postgresql_config_json
+    postgresql_config_json=$(bashio::config 'postgresql_config')
+
+    # Nothing to do if config is empty or null
+    if [[ "${postgresql_config_json}" == "null" ]] || \
+       [[ "${postgresql_config_json}" == "{}" ]]; then
+        return 0
+    fi
+
+    while IFS= read -r key; do
+        [[ -z "${key}" ]] && continue
+
         # Check if parameter is forbidden
         if is_forbidden_param "${key}"; then
             bashio::log.warning "Skipping forbidden parameter: ${key} (managed by addon)"
             continue
         fi
-        
-        # Get the value for this key
+
+        # Get the value for this key using --arg to prevent JQ injection
         local value
-        value=$(bashio::config "postgresql_config.${key}")
+        value=$(echo "${postgresql_config_json}" | jq -r --arg k "${key}" '.[$k]')
         
         # Check if parameter already exists in the config file
         if grep -q "^[[:space:]]*${key}[[:space:]]*=" "${POSTGRESQL_CONF}"; then
@@ -73,9 +86,9 @@ apply_postgresql_config() {
             echo "${key} = ${value}" >> "${POSTGRESQL_CONF}"
         fi
         
-        ((PARAM_COUNT++))
-    done
-    
+        ((PARAM_COUNT += 1))
+    done < <(echo "${postgresql_config_json}" | jq -r 'keys[]')
+
     if [[ ${PARAM_COUNT} -gt 0 ]]; then
         bashio::log.info "Applied ${PARAM_COUNT} PostgreSQL configuration parameter(s)"
     fi
@@ -140,7 +153,7 @@ apply_pg_hba_config() {
         bashio::log.info "Adding pg_hba.conf rule: ${rule_line}"
         echo "${rule_line}" >> "${PG_HBA_CONF}"
         
-        ((RULE_COUNT++))
+        ((RULE_COUNT += 1))
     done
     
     if [[ ${RULE_COUNT} -gt 0 ]]; then
