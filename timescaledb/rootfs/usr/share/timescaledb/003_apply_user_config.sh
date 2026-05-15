@@ -33,13 +33,28 @@ FORBIDDEN_PARAMS=(
 is_forbidden_param() {
     local param="${1}"
     local forbidden
-    
+
     for forbidden in "${FORBIDDEN_PARAMS[@]}"; do
         if [[ "${param}" == "${forbidden}" ]]; then
             return 0
         fi
     done
     return 1
+}
+
+# Safely read an optional bashio config value.
+# bashio::config "key" "" collapses the empty-string default to the literal
+# string "null" (due to `${2:-null}` in bashio), which then gets written into
+# pg_hba.conf and rejected by PostgreSQL. Guard with has_value to return a true
+# empty string instead.
+optional_config() {
+    local key="${1}"
+    local fallback="${2:-}"
+    if bashio::config.has_value "${key}"; then
+        bashio::config "${key}"
+    else
+        printf "%s" "${fallback}"
+    fi
 }
 
 # Apply postgresql.conf configuration
@@ -83,41 +98,45 @@ apply_postgresql_config() {
 
 # Apply pg_hba.conf configuration
 apply_pg_hba_config() {
-    if ! bashio::config.has_value 'pg_hba_config'; then
-        return 0
-    fi
-    
-    bashio::log.info "Applying pg_hba.conf authentication rules..."
-
-    # Remove any previously written user-defined rules to avoid duplicates on restart
+    # Always clean up previously written user-defined rules first so that
+    # clearing pg_hba_config in the addon UI also removes any orphaned rules
+    # (notably important to recover from a prior run that wrote malformed
+    # entries — see GitHub issue #81).
     if grep -q "^# User-defined authentication rules" "${PG_HBA_CONF}"; then
-        bashio::log.debug "Removing existing user-defined rules before re-applying..."
+        bashio::log.debug "Removing existing user-defined rules..."
         sed -i '/^# User-defined authentication rules/,$d' "${PG_HBA_CONF}"
         # Remove any trailing blank lines left behind
         sed -i -e :a -e '/^[[:space:]]*$/{$d;N;ba}' "${PG_HBA_CONF}"
     fi
 
+    if ! bashio::config.has_value 'pg_hba_config'; then
+        return 0
+    fi
+
+    bashio::log.info "Applying pg_hba.conf authentication rules..."
+
     # Add a comment separator for user rules
     echo "" >> "${PG_HBA_CONF}"
     echo "# User-defined authentication rules" >> "${PG_HBA_CONF}"
-    
+
     # Get the number of rules
     local rule_count
     rule_count=$(bashio::config 'pg_hba_config | length')
-    
+
     # Process each rule
     for (( i=0; i<rule_count; i++ )); do
         local type database user address method options
         local rule_line
-        
-        # Get rule components
-        type=$(bashio::config "pg_hba_config[${i}].type" "host")
-        database=$(bashio::config "pg_hba_config[${i}].database" "")
-        user=$(bashio::config "pg_hba_config[${i}].user" "")
-        address=$(bashio::config "pg_hba_config[${i}].address" "")
-        method=$(bashio::config "pg_hba_config[${i}].method" "")
-        options=$(bashio::config "pg_hba_config[${i}].options" "")
-        
+
+        # Read rule components via optional_config so unset/null fields become
+        # true empty strings instead of the literal string "null".
+        type=$(optional_config "pg_hba_config[${i}].type" "host")
+        database=$(optional_config "pg_hba_config[${i}].database")
+        user=$(optional_config "pg_hba_config[${i}].user")
+        address=$(optional_config "pg_hba_config[${i}].address")
+        method=$(optional_config "pg_hba_config[${i}].method")
+        options=$(optional_config "pg_hba_config[${i}].options")
+
         # Validate required fields
         if [[ -z "${database}" ]] || [[ -z "${user}" ]] || [[ -z "${method}" ]]; then
             bashio::log.warning "Skipping invalid pg_hba rule ${i}: missing required field(s) (database, user, or method)"

@@ -310,10 +310,10 @@ if bashio::config.has_value 'max_connections'; then
 	bashio::log.info "done"
 fi
 
-# Apply user-provided PostgreSQL configuration overrides
-if bashio::config.has_value 'postgresql_config' || bashio::config.has_value 'pg_hba_config'; then
-	bashio::log.info "Applying user configuration overrides.."
-	chmod 707 "/usr/share/timescaledb/003_apply_user_config.sh"
-	/usr/share/timescaledb/003_apply_user_config.sh
-	bashio::log.info "done"
-fi
+# Always invoke the user-config script: even when both override blocks are
+# empty it still cleans up any previously written user-defined pg_hba.conf
+# rules so a cleared config is honored.
+bashio::log.info "Applying user configuration overrides.."
+chmod 707 "/usr/share/timescaledb/003_apply_user_config.sh"
+/usr/share/timescaledb/003_apply_user_config.sh
+bashio::log.info "done"
