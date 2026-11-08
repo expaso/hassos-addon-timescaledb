@@ -1,4 +1,5 @@
-FROM timescale/timescaledb:latest-pg18
+ARG TIMESCALEDB_VERSION=2.31.0
+FROM timescale/timescaledb:${TIMESCALEDB_VERSION}-pg18
 ARG VERSION
 ARG TARGETARCH
 ARG TARGETVARIANT
@@ -31,7 +32,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
     && cd /build/pgagent \
     && git checkout ${VERSION} \
 && git apply -v ../pgagent.patch \
-    && cmake . \
+    && cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 . \
     && make && make install \
     && cd ~ \
     && apk del .fetch-deps .build-deps \

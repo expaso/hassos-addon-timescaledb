@@ -17,6 +17,13 @@ NEW_INSTALL=false
 RESTORE_MODE=false
 BUILD_TIMESTAMP="$(cat /build-timestamp)"
 
+# Returns success when extension $2 is installed in database $1.
+# Compares the query result instead of piping to 'grep -q': under bashio's pipefail,
+# grep closing the pipe early can make an installed extension look missing.
+extensionInstalled () {
+	[[ "$(psql -X -U postgres -d "${1}" -tAc "select 1 from pg_extension where extname = '${2}';")" == "1" ]]
+}
+
 # Applies permission to the data directory for the postgres user
 applyPermissions () {
 	chown -R postgres:postgres ${POSTGRES_DATA}
@@ -24,12 +31,14 @@ applyPermissions () {
 }
 
 # Initializes the data directory
+# $1: Optional extra arguments for initdb
 initializeDataDirectory () {
+	local INITDB_ARGS=${1:-}
 	# Init data-directory
     bashio::log.info "Initializing new postgres directory.."
 	mkdir -p ${POSTGRES_DATA}
 	applyPermissions
-	su - postgres -c "initdb -D ${POSTGRES_DATA}"
+	su - postgres -c "initdb ${INITDB_ARGS} -D ${POSTGRES_DATA}"
 	# Set timescaledb and pg_stat_statements as being enabled in the postgres config file.
 	sed -r -i "s/[#]*\s*(shared_preload_libraries)\s*=\s*'(.*)'/\1 = 'timescaledb,pg_stat_statements,\2'/;s/,'''/'/;s/,'/'/" ${POSTGRES_DATA}/postgresql.conf
 	
@@ -67,28 +76,28 @@ upgradeTimeScaleExtension () {
 		--field-separator ' ' \
 		--quiet \
 	| while read datname; do
-		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'timescaledb';" | grep -q 1 \
+		extensionInstalled "${datname}" timescaledb \
 		&& (
 			bashio::log.info "Try updating Timescale Extension for database: '${datname}'.."; \
 			# Drop the old functions and views, these could be incompatible with the new version.
 			# See: https://github.com/timescale/timescaledb-extras/issues/34
 			# Please note that we do not drop the extension itself, because that would drop the hypertables as well.
 			# The views and functions could be recreated from: https://github.com/timescale/timescaledb-extras
-			psql -U "postgres" homeassistant -c "drop function if exists public.get_dimension_details(regclass)"; \
-			psql -U "postgres" homeassistant -c "drop view if exists public.chunks_tstz"; \
-			psql -U "postgres" homeassistant -c "drop view if exists public.chunks_ts"; \
+			psql -U "postgres" -d "${datname}" -c "drop function if exists public.get_dimension_details(regclass)"; \
+			psql -U "postgres" -d "${datname}" -c "drop view if exists public.chunks_tstz"; \
+			psql -U "postgres" -d "${datname}" -c "drop view if exists public.chunks_ts"; \
 			(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb UPDATE;" || true)
 		)
 
 		# Update Timescale Toolkit Extension when needed
-		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'timescaledb_toolkit';" | grep -q 1 \
+		extensionInstalled "${datname}" timescaledb_toolkit \
 		&& (
 			bashio::log.info "Try updating Timescale Toolkit Extension for database: '${datname}'.."; \
 			(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb_toolkit UPDATE;" || true)
 		)
 
 		# Update Vector extension when needed
-		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'vector';" | grep -q 1 \
+		extensionInstalled "${datname}" vector \
 		&& (
 			bashio::log.info "Try updating Vector Extension for database: '${datname}'.."; \
 			(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION vector UPDATE;" || true)
@@ -141,8 +150,16 @@ upgradePostgreSQL() {
 	rm ${POSTGRES_DATA}${FROM_VERSION}/pg_hba.conf
 	mv ${POSTGRES_DATA}${FROM_VERSION}/pg_hba_backup.conf ${POSTGRES_DATA}${FROM_VERSION}/pg_hba.conf
 
-	# Create a fresh data-directory
-	initializeDataDirectory
+	# Create a fresh data-directory.
+	# PostgreSQL 18 enables data checksums by default, but pg_upgrade requires the new cluster
+	# to use the same setting as the old one.
+	local INITDB_ARGS=""
+	local OLD_CONTROLDATA
+	OLD_CONTROLDATA="$("/usr/libexec/postgresql${FROM_VERSION}/pg_controldata" "${POSTGRES_DATA}${FROM_VERSION}")"
+	if [[ "${OLD_CONTROLDATA}" =~ Data\ page\ checksum\ version:[[:space:]]*0($'\n'|$) ]]; then
+		INITDB_ARGS="--no-data-checksums"
+	fi
+	initializeDataDirectory "${INITDB_ARGS}"
 
 	# And upgrade!
 	bashio::log.notice "Upgrading databases.."
@@ -229,10 +246,10 @@ else
 
 	# Check if we need to restore again.
 	if $(bashio::config.true 'retry_upgrade'); then
-		if bashio::fs.directory_exists "${POSTGRES_DATA}14"; then
-			bashio::log.notice "An aborted upgrade from Postgres 14 was detected. Restoring.."
+		if bashio::fs.directory_exists "${POSTGRES_DATA}17"; then
+			bashio::log.notice "An aborted upgrade from Postgres 17 was detected. Restoring.."
 			rm -r ${POSTGRES_DATA}
-			mv ${POSTGRES_DATA}14 ${POSTGRES_DATA}
+			mv ${POSTGRES_DATA}17 ${POSTGRES_DATA}
 		else
 			bashio::config.suggest.false 'retry_upgrade' 'This option is only for temporary reasons: to recover from a failed upgrade.'
 		fi
@@ -252,27 +269,14 @@ else
 		exit 1
 	fi
 
-	# Check if we need to upgrade from 15 to 17
-	if [[ $(< ${POSTGRES_DATA}/PG_VERSION) == "15" ]]; then
-		bashio::log.notice "A database upgrade is required from Postgres 15 -> 17"
-		if upgradePostgreSQL 15 17; then
-			bashio::log.notice "Upgrade was succesful"
-		else
-			bashio::log.error "Upgrade was not succesful."
+	# Postgres 15 and 16 need the previous add-on version (5.x) to upgrade to 17 first
+	for OLD_VERSION in 15 16; do
+		if [[ $(< ${POSTGRES_DATA}/PG_VERSION) == "${OLD_VERSION}" ]]; then
+			bashio::log.notice "A database upgrade is required from Postgres ${OLD_VERSION}."
+			bashio::log.error "Upgrade was not succesfull. This addon version does no longer support Postgres ${OLD_VERSION}. Please install addon version 5.x first to upgrade to Postgres 17, then update to this version."
 			exit 1
 		fi
-	fi
-
-	# Check if we need to upgrade from 16 to 17
-	if [[ $(< ${POSTGRES_DATA}/PG_VERSION) == "16" ]]; then
-		bashio::log.notice "A database upgrade is required from Postgres 16 -> 17"
-		if upgradePostgreSQL 16 17; then
-			bashio::log.notice "Upgrade was succesful"
-		else
-			bashio::log.error "Upgrade was not succesful."
-			exit 1
-		fi
-	fi
+	done
 
 	# Check if we need to upgrade from 17 to 18
 	if [[ $(< ${POSTGRES_DATA}/PG_VERSION) == "17" ]]; then

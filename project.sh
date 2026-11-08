@@ -3,6 +3,9 @@ set -e;
 
 PLATFORM="linux/arm64"
 
+# The dependency images are built on this TimescaleDB image, the add-on Dockerfile uses the same version.
+TIMESCALEDB_VERSION="2.31.0"
+
 function printInColor() {
     # Set the color code based on the color name
     color=0
@@ -35,17 +38,24 @@ function printInColor() {
 function build_dependency() {
     local component=$1
     local version=$2
+    local tag="${version}-ts${TIMESCALEDB_VERSION}"
 
-    printInColor "Building docker dependency ${component}" "green"
+    # timescaledb-tools does not depend on TimescaleDB itself
+    if [ "${component}" == "timescaledb-tools" ]; then
+        tag="${version}"
+    fi
+
+    printInColor "Building docker dependency ${component}:${tag}" "green"
 
     docker buildx build \
         --push \
-        --platform "linux/amd64,linux/arm64,linux/arm/v7,linux/i386,linux/arm/v6" \
+        --platform "linux/amd64,linux/arm64" \
         --cache-from "type=registry,ref=ghcr.io/expaso/timescaledb/dependency/${component}:cache" \
         --cache-to "type=registry,ref=ghcr.io/expaso/timescaledb/dependency/${component}:cache,mode=max" \
-        --tag "ghcr.io/expaso/timescaledb/dependency/${component}:${version}" \
+        --tag "ghcr.io/expaso/timescaledb/dependency/${component}:${tag}" \
         --progress plain \
         --build-arg "VERSION=${version}" \
+        --build-arg "TIMESCALEDB_VERSION=${TIMESCALEDB_VERSION}" \
         --file "./timescaledb/docker-dependencies/${component}" \
         . \
         && printInColor "Done building docker image!" "green"    
@@ -140,9 +150,6 @@ function build_all() {
         case $platform in
             "aarch64") docker_platform="linux/arm64";;
             "amd64") docker_platform="linux/amd64";;
-            "armv7") docker_platform="linux/arm/v7";;
-            "i386") docker_platform="linux/i386";;
-            "armhf") docker_platform="linux/arm/v6";;
         esac
 
         printInColor "Building platform ${platform} (${docker_platform}) for Home Assistant with tag ${tag}" "green"
@@ -181,15 +188,17 @@ elif [ "$1" == "build-dependencies" ]; then
         printInColor "Building all dependencies.."
 
         build_dependency timescaledb-tools "latest"
-        build_dependency pgagent-pg16 "pgagent-4.2.3"
         build_dependency pgagent-pg17 "pgagent-4.2.3"
-        build_dependency timescaledb-toolkit-pg16 "1.22.0"
-        build_dependency timescaledb-toolkit-pg17 "1.22.0"
-        build_dependency postgis-pg16 "3.6.2"
-        build_dependency postgis-pg17 "3.6.2"
-        build_dependency postgresql-extension-system-stat-pg16 "3.2"
+        build_dependency pgagent-pg18 "pgagent-4.2.3"
+        # Docker tags cannot contain '+': 1.27.0-p2 builds git tag 1.27.0+p2
+        build_dependency timescaledb-toolkit-pg17 "1.27.0-p2"
+        build_dependency timescaledb-toolkit-pg18 "1.27.0-p2"
+        build_dependency postgis-pg17 "3.6.4"
+        build_dependency postgis-pg18 "3.6.4"
         build_dependency postgresql-extension-system-stat-pg17 "3.2"
-        build_dependency pgvector-pg17 "0.8.2"
+        build_dependency postgresql-extension-system-stat-pg18 "3.2"
+        build_dependency pgvector-pg17 "0.8.7"
+        build_dependency pgvector-pg18 "0.8.7"
     else
         printInColor "Building dependency $2.."
         build_dependency "$2" "$3"

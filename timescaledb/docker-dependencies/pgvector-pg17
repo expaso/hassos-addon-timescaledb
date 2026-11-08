@@ -1,4 +1,5 @@
-FROM timescale/timescaledb:latest-pg17 AS timescale-pg17
+ARG TIMESCALEDB_VERSION=2.31.0
+FROM timescale/timescaledb:${TIMESCALEDB_VERSION}-pg17 AS timescale-pg17
 
 FROM timescale-pg17 AS pgvector
 ARG VERSION
@@ -28,8 +29,8 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 				build-base \
                 libxml2-dev \
                 protobuf-c-dev \
-                clang19 \
-                llvm19 \
+                clang21 \
+                llvm21 \
     && mkdir -p /build \
         && cd /build \
         && git clone --branch v${VERSION} https://github.com/pgvector/pgvector.git \

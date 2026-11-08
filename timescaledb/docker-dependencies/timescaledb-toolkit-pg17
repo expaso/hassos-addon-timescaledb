@@ -1,4 +1,5 @@
-FROM timescale/timescaledb:latest-pg17 AS timescale-pg17
+ARG TIMESCALEDB_VERSION=2.31.0
+FROM timescale/timescaledb:${TIMESCALEDB_VERSION}-pg17 AS timescale-pg17
 
 FROM timescale-pg17 AS timescaledb-toolkit
 ARG VERSION
@@ -29,7 +30,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
             && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable \
             && export PATH="/root/.cargo/bin:${PATH}" \
             && export OPENSSL_DIR=/usr \
-            && cargo install --version '=0.16.1' --locked --force cargo-pgrx \
+            && cargo install --version '=0.18.1' --locked --force cargo-pgrx \
             && cargo install --force rustfmt; \
        fi
 
@@ -39,7 +40,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
     set -ex \
     && apk update \
     && if [ "$TARGETARCH" == "amd64" ] || [ "$TARGETARCH" == "arm64" ]; then \
-        apk add gcompat clang16-libclang clang15-libclang; \
+        apk add gcompat clang-libclang; \
     fi
 
 ENV RUST_MIN_STACK=4194304
@@ -53,7 +54,7 @@ RUN --mount=type=cache,id=pgrx-${TARGETARCH}-${TARGETVARIANT},sharing=locked,tar
         && mkdir -p /build/ \
         && cd /build \
             && git clone https://github.com/timescale/timescaledb-toolkit.git . \
-            && git checkout ${VERSION} \
+            && git checkout "$(echo "${VERSION}" | sed "s/-p\([0-9]*\)$/+p\1/")" \
             && cd extension \
             # initdb fails as root so generate the correct config ourselves
             # && cargo pgx init --pg17 /usr/lib/postgresql/17/bin/pg_config

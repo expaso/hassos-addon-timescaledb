@@ -6,7 +6,14 @@
 
 # Home Assistant Add-on: [PostgreSQL](https://www.postgresql.org/) [TimescaleDB](https://www.timescale.com/)
 
-## [PostgreSql 18](https://www.postgresql.org/) & [Postgis 3.6.0](https://postgis.net/) & [TimescaleDB 2.26.0](https://www.timescale.com/) & [TimescaleDB Toolkit 1.22.0](https://github.com/timescale/timescaledb-toolkit) & [pgAgent 4.2.3](https://www.pgadmin.org/docs/pgadmin4/development/pgagent.html)
+## [PostgreSql 18](https://www.postgresql.org/) & [Postgis 3.6.4](https://postgis.net/) & [TimescaleDB 2.31.0](https://www.timescale.com/) & [TimescaleDB Toolkit 1.27.0](https://github.com/timescale/timescaledb-toolkit) & [pgAgent 4.2.3](https://www.pgadmin.org/docs/pgadmin4/development/pgagent.html) & [pgVector 0.8.7](https://github.com/pgvector/pgvector)
+
+#### Upgrading from version 5.x
+
+Version 6 upgrades your databases from PostgreSQL 17 to 18 automatically on the first start. Take a backup first; the upgrade can take a while on large databases.
+
+- Databases on PostgreSQL 15 or 16: install version 5.x first, which upgrades them to PostgreSQL 17, then update to version 6.
+- Version 6 only supports `aarch64` and `amd64`, like Home Assistant itself. Use version 5.x on `armhf`, `armv7` or `i386`.
 
 #### Configuation
 
@@ -89,8 +96,8 @@ Example: ['sed -i -e "/max_connections =/ s/= .*/= 50/" /data/postgres/postgresq
 #### Option: `retry_upgrade`
 
 Advanced users only!
-When set, the upgrade from Postgres 14 to 15 could be retryed if it failed mid-flight.
-Basically this will try to find the old database-files from Postgres 12, and restore them before trying to upgrade to Postgres 14 again.
+When set, the upgrade from Postgres 17 to 18 could be retryed if it failed mid-flight.
+Basically this will try to find the old database-files from Postgres 17, and restore them before trying to upgrade to Postgres 18 again.
 
 !! Please don't set this if you don't know what you are doing or before taking a backup. !!
 
@@ -136,9 +143,6 @@ pull one of the images for the desired architecture from docker hub:
 ```
 docker pull ghcr.io/expaso/timescaledb/amd64:stable
 docker pull ghcr.io/expaso/timescaledb/aarch64:stable
-docker pull ghcr.io/expaso/timescaledb/armv7:stable
-docker pull ghcr.io/expaso/timescaledb/armhf:stable
-docker pull ghcr.io/expaso/timescaledb/i386:stable
 ```
 
 You can replace *stable* with the version number you want to use.

@@ -1,4 +1,5 @@
-FROM timescale/timescaledb:latest-pg17
+ARG TIMESCALEDB_VERSION=2.31.0
+FROM timescale/timescaledb:${TIMESCALEDB_VERSION}-pg17
 ARG VERSION
 ARG TARGETARCH
 ARG TARGETVARIANT
@@ -23,8 +24,8 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 				build-base \
 				boost-dev \
 				openldap-dev \
-                clang19 \
-                llvm19 \
+                clang21 \
+                llvm21 \
     && git clone https://github.com/EnterpriseDB/system_stats.git /build/system-stats \
         && cd /build/system-stats \
         && git checkout v${VERSION}
