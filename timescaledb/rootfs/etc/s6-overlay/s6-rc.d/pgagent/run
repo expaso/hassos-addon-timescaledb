@@ -19,7 +19,7 @@ extensionInstalled () {
 }
 
 # Check for updates
-if [[ $(< ${VERSION_FILE}) != ${BUILD_TIMESTAMP} ]]; then
+if [[ $(< ${VERSION_FILE}) != "${BUILD_TIMESTAMP}" ]]; then
 	UPDATE=true
 fi
 
@@ -31,7 +31,7 @@ done
 # Check if we need to update..
 if bashio::var.true "${UPDATE}"; then
 	bashio::log.info "PgAgent: Waiting for update to complete.."
-	while [[ $(< ${VERSION_FILE}) != ${BUILD_TIMESTAMP} ]]; do
+	while [[ $(< ${VERSION_FILE}) != "${BUILD_TIMESTAMP}" ]]; do
 		sleep 3
 		bashio::log.info "PgAgent: Waiting for update to complete.."
 	done
