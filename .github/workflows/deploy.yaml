@@ -12,9 +12,13 @@ on:
     types:
       - completed
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   workflows:
-    uses: hassio-addons/workflows/.github/workflows/addon-deploy.yaml@main
+    uses: hassio-addons/workflows/.github/workflows/app-deploy.yaml@main
     with:
       repository: "hassos-addons"
       repository_edge: "hassos-addons-edge"
