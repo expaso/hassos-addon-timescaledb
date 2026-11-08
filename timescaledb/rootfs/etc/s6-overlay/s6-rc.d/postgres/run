@@ -62,6 +62,7 @@ if bashio::var.true "${UPDATE}"; then
 		# Update Timescale extension when needed
 		extensionInstalled "${datname}" timescaledb \
 		&& bashio::log.info "Try updating Timescale Extension for database: '${datname}'.." \
+		&& (psql -X -U postgres -d "${datname}" -f /usr/share/timescaledb/drop_timescaledb_extras.sql || true) \
 		&& psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb UPDATE;" || true >> /var/log/timescaledb.upgrade.log
 
 		# Update Postgis when extension needed

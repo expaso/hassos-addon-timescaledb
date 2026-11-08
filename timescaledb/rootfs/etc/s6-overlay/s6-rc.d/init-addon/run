@@ -79,13 +79,9 @@ upgradeTimeScaleExtension () {
 		extensionInstalled "${datname}" timescaledb \
 		&& (
 			bashio::log.info "Try updating Timescale Extension for database: '${datname}'.."; \
-			# Drop the old functions and views, these could be incompatible with the new version.
-			# See: https://github.com/timescale/timescaledb-extras/issues/34
+			# Drop timescaledb-extras helpers that block the update, see the script for details.
 			# Please note that we do not drop the extension itself, because that would drop the hypertables as well.
-			# The views and functions could be recreated from: https://github.com/timescale/timescaledb-extras
-			psql -U "postgres" -d "${datname}" -c "drop function if exists public.get_dimension_details(regclass)"; \
-			psql -U "postgres" -d "${datname}" -c "drop view if exists public.chunks_tstz"; \
-			psql -U "postgres" -d "${datname}" -c "drop view if exists public.chunks_ts"; \
+			psql -X -U "postgres" -d "${datname}" -f /usr/share/timescaledb/drop_timescaledb_extras.sql; \
 			(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb UPDATE;" || true)
 		)
 
