@@ -9,36 +9,33 @@ SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 # -----------------------------------------------------------------
 # TimescaleDB Toolkit (Rust/pgrx), built against the PostgreSQL package of this Alpine release
 # -----------------------------------------------------------------
-# hadolint ignore=DL3018,SC3014
+# Alpine's own Rust: rustup's aarch64 musl toolchain links binaries with the glibc loader
+# hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
-    --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
+    --mount=type=cache,id=cargo-registry-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo/registry \
     set -ex \
     && apk update \
     && apk add \
         build-base \
         ca-certificates \
+        cargo \
         clang \
         clang-libclang \
-        curl \
         git \
         openssl-dev \
         pkgconf \
         postgresql${PG_MAJOR} \
         postgresql${PG_MAJOR}-dev \
-    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable \
-    && export PATH="/root/.cargo/bin:${PATH}" \
-    && export OPENSSL_DIR=/usr \
-    && cargo install --version '=0.18.1' --locked --force cargo-pgrx
+        rust \
+        rustfmt \
+    && cargo install --locked --root /usr/local --version '=0.18.1' cargo-pgrx
 
 ENV RUST_MIN_STACK=4194304
 
 # Docker tags cannot contain '+': a VERSION like 1.27.0-p2 builds git tag 1.27.0+p2
-# hadolint ignore=DL3003,SC3014
-RUN --mount=type=cache,id=pgrx-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.pgrx \
-    --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
+# hadolint ignore=DL3003
+RUN --mount=type=cache,id=cargo-registry-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo/registry \
     set -ex \
-    && export PATH="/root/.cargo/bin:${PATH}" \
-    && export RUSTFLAGS="-C target-feature=-crt-static -C codegen-units=1" \
     && PG_CONFIG="/usr/libexec/postgresql${PG_MAJOR}/pg_config" \
     && mkdir -p /build /root/.pgrx \
     && cd /build \
@@ -49,7 +46,7 @@ RUN --mount=type=cache,id=pgrx-${TARGETARCH}-${TARGETVARIANT},sharing=locked,tar
     && cargo pgrx install --release --pg-config "${PG_CONFIG}" \
     && cargo run --manifest-path ../tools/post-install/Cargo.toml -- "${PG_CONFIG}" \
     && cd / \
-    && rm -rf /build
+    && rm -rf /build /root/.pgrx
 
 LABEL \
     org.opencontainers.image.source="https://github.com/expaso/hassos-addon-timescaledb"
