@@ -3,8 +3,9 @@ set -e;
 
 PLATFORM="linux/arm64"
 
-# The dependency images are built on this TimescaleDB image, the add-on Dockerfile uses the same version.
-TIMESCALEDB_VERSION="2.31.0"
+# The dependency images are built on this Alpine release, against its PostgreSQL packages.
+# Keep it equal to the Alpine release of the base image in timescaledb/build.yaml.
+ALPINE_VERSION="3.24"
 
 function printInColor() {
     # Set the color code based on the color name
@@ -38,9 +39,9 @@ function printInColor() {
 function build_dependency() {
     local component=$1
     local version=$2
-    local tag="${version}-ts${TIMESCALEDB_VERSION}"
+    local tag="${version}-alpine${ALPINE_VERSION}"
 
-    # timescaledb-tools does not depend on TimescaleDB itself
+    # timescaledb-tools does not depend on Alpine or PostgreSQL
     if [ "${component}" == "timescaledb-tools" ]; then
         tag="${version}"
     fi
@@ -55,7 +56,7 @@ function build_dependency() {
         --tag "ghcr.io/expaso/timescaledb/dependency/${component}:${tag}" \
         --progress plain \
         --build-arg "VERSION=${version}" \
-        --build-arg "TIMESCALEDB_VERSION=${TIMESCALEDB_VERSION}" \
+        --build-arg "ALPINE_VERSION=${ALPINE_VERSION}" \
         --file "./timescaledb/docker-dependencies/${component}" \
         . \
         && printInColor "Done building docker image!" "green"    
