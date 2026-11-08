@@ -14,7 +14,7 @@ PostgreSQL has earned a strong reputation for its proven architecture, reliabili
 
 ## TimescaleDB Overview
 
-From: https://docs.timescale.com/latest/introduction
+From: https://www.tigerdata.com/docs/about/latest
 
 TimescaleDB is an open-source time-series database optimized for fast ingest and complex queries. It speaks "full SQL" and is correspondingly easy to use like a traditional relational database, yet scales in ways previously reserved for NoSQL databases.
 
