@@ -121,23 +121,34 @@ The default is port `5432`
 **Securiy Notice!**
 
 The default username is `postgres` with password `homeassistant`.
-Make sure you change this immediately after activating the add-on:
+Change it immediately after activating the add-on with the `postgres_password` option, or in SQL:
 
 ```
-ALTER USER user_name WITH PASSWORD 'strongpassword';
+ALTER USER postgres WITH PASSWORD 'strongpassword';
 ```
 
 A default `pg_hba.conf` is created in the data directory with the following content, which allows local peer users and network users with passwords.:
 
 ```
 # TYPE  DATABASE        USER            ADDRESS                 METHOD
-host    all             all             0.0.0.0/0               md5"
-local   all             all             0.0.0.0/0               md5"
-local   all             all             0.0.0.0/0               peer"
+host    all             all             0.0.0.0/0               scram-sha-256
+host    all             all             ::/0                    scram-sha-256
+local   all             all                                     scram-sha-256
+local   all             all                                     peer
 ```
+
+New installations use `scram-sha-256` (PostgreSQL 18 deprecates MD5 passwords). Installations upgraded from an older version, and databases restored from a backup, keep `md5`: their roles may still have MD5 password hashes, and `md5` accepts both MD5 and SCRAM hashes.
 
 Please review this configuration carefully by examine the docs:
 https://www.postgresql.org/docs/devel/auth-pg-hba-conf.html
+
+## Configuration
+
+#### Option: `postgres_password`
+
+The password of the `postgres` superuser. When set, the add-on applies it on every start, so you can change it here at any time. When not set, a new installation gets the default password `homeassistant`, with a warning in the log, and an existing installation keeps its current password.
+
+Remember to update the password everywhere you connect with the `postgres` user, like the `db_url` of the recorder or LTSS.
 
 ## Advanced Configuration
 

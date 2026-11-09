@@ -37,10 +37,27 @@ while ! psql -U "postgres" postgres -c "" 2> /dev/null; do
 	sleep 1
 done
 
-# Setup postgres user on first run
-if [[ -f "/data/firstrun" ]]; then
+# Sets the password of the postgres superuser.
+# The password goes in as a psql variable (quoted by psql), and statement logging is off for
+# this session so it never ends up in the PostgreSQL log.
+# $1: password
+setPostgresPassword() {
+	psql -X -q -U postgres -d postgres -v ON_ERROR_STOP=1 -v password="${1}" <<'SQL'
+SET log_statement = 'none';
+SET log_min_duration_statement = -1;
+ALTER USER postgres WITH PASSWORD :'password';
+SQL
+}
+
+# The postgres password: from the postgres_password option on every start when it is set,
+# so it can be changed later; otherwise the default on the first run only.
+if bashio::config.has_value 'postgres_password'; then
+	bashio::log.info "Setting the postgres password from the postgres_password option.."
+	setPostgresPassword "$(bashio::config 'postgres_password')"
+elif [[ -f "/data/firstrun" ]]; then
 	bashio::log.info "Setting up postgres user.."
-	psql -U "postgres" postgres -c "ALTER USER postgres WITH PASSWORD 'homeassistant';"
+	setPostgresPassword "homeassistant"
+	bashio::log.warning "The postgres user has the default password 'homeassistant'. Set the postgres_password option to change it."
 fi
 
 # Check for extension updates..

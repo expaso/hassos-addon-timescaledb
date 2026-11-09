@@ -43,6 +43,7 @@ options:
   postgresql_config: {}
   pg_hba_config: []
 schema:
+  postgres_password: password?
   databases:
     - str
   timescale_enabled:
