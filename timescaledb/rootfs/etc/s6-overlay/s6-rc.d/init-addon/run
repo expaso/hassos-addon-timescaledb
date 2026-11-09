@@ -7,15 +7,17 @@ declare POSTGRES_DATA
 declare VERSION_FILE
 declare NEW_INSTALL
 declare BUILD_TIMESTAMP
-declare BACKUP_FILE
 declare RESTORE_MODE
 
 POSTGRES_DATA=/data/postgres
 VERSION_FILE=/data/version
-BACKUP_FILE=/data/backup_db.sql
 NEW_INSTALL=false
 RESTORE_MODE=false
 BUILD_TIMESTAMP="$(cat /build-timestamp)"
+
+# Restore functions, and backupAvailable to detect a database dump from a backup
+# shellcheck source=/dev/null
+source /usr/share/timescaledb/restore_from_backup.sh
 
 # Returns success when extension $2 is installed in database $1.
 # Compares the query result instead of piping to 'grep -q': under bashio's pipefail,
@@ -189,8 +191,8 @@ if ! bashio::fs.directory_exists "${POSTGRES_DATA}"; then
     NEW_INSTALL=true
     
     # Check if we have a backup to restore from
-    if [[ -f "${BACKUP_FILE}" ]]; then
-        bashio::log.notice "Found backup SQL file. Will restore after initialization."
+    if backupAvailable; then
+        bashio::log.notice "Found a database dump from a backup. Will restore after initialization."
         RESTORE_MODE=true
     fi
 else
@@ -207,8 +209,8 @@ else
 	        mv "${POSTGRES_DATA}" "${POSTGRES_DATA}.corrupted.$(date +%Y%m%d_%H%M%S)"
 	    fi
 	    # If a SQL backup is available, restore from it; otherwise start fresh
-	    if [[ -f "${BACKUP_FILE}" ]]; then
-	        bashio::log.warning "Database appears corrupted (missing PG_VERSION). Backup SQL found."
+	    if backupAvailable; then
+	        bashio::log.warning "Database appears corrupted (missing PG_VERSION). Database dump from a backup found."
 	        bashio::log.warning "Will attempt to restore from backup..."
 	        RESTORE_MODE=true
 	    else
@@ -226,17 +228,14 @@ if bashio::var.true "${NEW_INSTALL}"; then
 	
 	# Restore from backup if available
 	if bashio::var.true "${RESTORE_MODE}"; then
-	    bashio::log.notice "Restore mode enabled. Loading restore script..."
-	    # shellcheck source=/dev/null
-	    source /usr/share/timescaledb/restore_from_backup.sh
-	    
+	    bashio::log.notice "Restore mode enabled."
 	    if restoreFromBackup; then
-	        bashio::log.notice "Database restored successfully from backup SQL file!"
+	        bashio::log.notice "Database restored successfully from the backup!"
 	        # Mark that we've restored, so postgres startup can skip firstrun setup
 	        rm -f /data/firstrun
 	    else
 	        bashio::log.error "Failed to restore from backup. Starting with fresh database."
-	        bashio::log.error "The backup file has been preserved at ${BACKUP_FILE}"
+	        bashio::log.error "The database dump has been preserved in /data/backup (or /data/backup_db.sql)"
 	        bashio::log.error "You may attempt manual restoration if needed."
 	        # Keep the backup file for manual recovery
 	    fi
