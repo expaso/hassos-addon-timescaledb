@@ -19,13 +19,13 @@ jobs:
       contents: read
       packages: read
       security-events: write
-    uses: hassio-addons/workflows/.github/workflows/app-ci.yaml@adec4b96071354cc44924a6ef9975ff60cf9ddd9  # v5.0.0
+    uses: hassio-addons/workflows/.github/workflows/app-ci.yaml@adec4b96071354cc44924a6ef9975ff60cf9ddd9 # v5.0.0
   deploy:
     needs: ci
     permissions:
       contents: read
       packages: write
-    uses: hassio-addons/workflows/.github/workflows/app-deploy.yaml@adec4b96071354cc44924a6ef9975ff60cf9ddd9  # v5.0.0
+    uses: hassio-addons/workflows/.github/workflows/app-deploy.yaml@adec4b96071354cc44924a6ef9975ff60cf9ddd9 # v5.0.0
     with:
       repository: "hassos-addons"
       repository_edge: "hassos-addons-edge"
