@@ -37,6 +37,7 @@ options:
     maxmemory: 512MB
     maxcpus: 4
   max_connections: 50
+  vectorchord: false
   system_packages: []
   init_commands: []
   retry_upgrade: false
@@ -53,6 +54,7 @@ schema:
     maxmemory: str?
     maxcpus: int(1,)?
   max_connections: int(20,)
+  vectorchord: bool
   system_packages:
     - str
   init_commands:

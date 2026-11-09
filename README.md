@@ -334,6 +334,27 @@ postgresql_settings:
 
 The new approach is simpler, safer, and easier to maintain. The `init_commands` option remains available for advanced use cases that aren't covered by the declarative configuration.
 
+## Immich (VectorChord)
+
+The add-on includes [VectorChord](https://github.com/tensorchord/VectorChord) (`vchord`) and pgvector, the extensions [Immich](https://immich.app/) needs. VectorChord has to be loaded at startup, so it is behind the `vectorchord` option (off by default):
+
+```yaml
+vectorchord: true
+```
+
+To use the database for [Immich](https://immich.app/), turn the option on, restart the add-on, and prepare a database once (for example in pgAdmin, or `psql` in the add-on console):
+
+```sql
+CREATE DATABASE immich;
+\c immich
+CREATE EXTENSION vchord CASCADE;
+CREATE EXTENSION earthdistance CASCADE;
+```
+
+Then point Immich at it with `DB_URL=postgresql://postgres:<password>@<home assistant host>:5432/immich` (map the port in the Network section). `vchord CASCADE` also installs pgvector, which VectorChord builds on.
+
+Turning the option off again stops loading VectorChord after the next restart; databases that use it (like Immich's) then fail on their vector indexes until you turn it back on.
+
 ## Backup and Restore
 
 This addon implements a robust backup and restore mechanism designed to protect your database from data loss.

@@ -25,6 +25,8 @@ FROM ghcr.io/expaso/timescaledb/dependency/postgresql-extension-system-stat-pg17
 FROM ghcr.io/expaso/timescaledb/dependency/postgresql-extension-system-stat-pg18:3.2-alpine3.24          AS system-stat-pg18
 FROM ghcr.io/expaso/timescaledb/dependency/pgvector-pg17:0.8.7-alpine3.24                                AS pgvector-pg17
 FROM ghcr.io/expaso/timescaledb/dependency/pgvector-pg18:0.8.7-alpine3.24                                AS pgvector-pg18
+FROM ghcr.io/expaso/timescaledb/dependency/vectorchord-pg17:1.1.1-alpine3.24                             AS vectorchord-pg17
+FROM ghcr.io/expaso/timescaledb/dependency/vectorchord-pg18:1.1.1-alpine3.24                             AS vectorchord-pg18
 
 
 ###########################################
@@ -197,6 +199,14 @@ COPY --from=pgvector-pg17 --link /usr/lib/postgresql17/vector*.so /usr/lib/postg
 COPY --from=pgvector-pg17 --link /usr/share/postgresql17/extension/vector* /usr/share/postgresql17/extension/
 COPY --from=pgvector-pg18 --link /usr/lib/postgresql18/vector*.so /usr/lib/postgresql18/
 COPY --from=pgvector-pg18 --link /usr/share/postgresql18/extension/vector* /usr/share/postgresql18/extension/
+
+# --------------------------------------------
+# Extension VectorChord (vchord, for Immich)
+# --------------------------------------------
+COPY --from=vectorchord-pg17 --link /usr/lib/postgresql17/vchord.so /usr/lib/postgresql17/
+COPY --from=vectorchord-pg17 --link /usr/share/postgresql17/extension/vchord* /usr/share/postgresql17/extension/
+COPY --from=vectorchord-pg18 --link /usr/lib/postgresql18/vchord.so /usr/lib/postgresql18/
+COPY --from=vectorchord-pg18 --link /usr/share/postgresql18/extension/vchord* /usr/share/postgresql18/extension/
 
 # --------------------------------------
 # Timescaledb Tools (alwasys latest)

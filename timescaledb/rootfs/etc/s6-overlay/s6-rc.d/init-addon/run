@@ -310,6 +310,34 @@ if bashio::var.false "${NEW_INSTALL}"; then
 	fi
 fi
 
+# Load VectorChord (vchord, needed by Immich) at startup when the vectorchord option is on,
+# and stop loading it when it is off. The other libraries are left as they are.
+configureVectorChord() {
+	local conf="${POSTGRES_DATA}/postgresql.conf"
+	local current
+	local wanted=""
+	local lib
+	local -a libs
+
+	current="$(sed -n -E "s/^shared_preload_libraries\s*=\s*'([^']*)'.*/\1/p" "${conf}" | tail -n 1)"
+	IFS=',' read -r -a libs <<< "${current}"
+	for lib in "${libs[@]}"; do
+		lib="${lib// /}"
+		if [[ -n "${lib}" ]] && [[ "${lib}" != "vchord" ]] && [[ "${lib}" != "vchord.so" ]]; then
+			wanted="${wanted:+${wanted},}${lib}"
+		fi
+	done
+	if bashio::config.true 'vectorchord'; then
+		wanted="${wanted:+${wanted},}vchord"
+	fi
+
+	if [[ "${wanted}" != "${current}" ]]; then
+		bashio::log.info "Setting shared_preload_libraries to '${wanted}'.."
+		sed -i -E "s/^(shared_preload_libraries\s*=\s*)'[^']*'/\1'${wanted}'/" "${conf}"
+	fi
+}
+configureVectorChord
+
 # Patch telemetry level
 if bashio::config.has_value 'timescaledb.telemetry'; then
 	sed -r -i "s/timescaledb.telemetry_level.=.'.*'/timescaledb.telemetry_level=$(bashio::config 'timescaledb.telemetry')/g" ${POSTGRES_DATA}/postgresql.conf

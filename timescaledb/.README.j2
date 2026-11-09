@@ -6,7 +6,7 @@
 
 # Home Assistant Add-on: [PostgreSQL](https://www.postgresql.org/) [TimescaleDB](https://www.timescale.com/)
 
-## [PostgreSql 18](https://www.postgresql.org/) & [Postgis 3.6.4](https://postgis.net/) & [TimescaleDB 2.31.0](https://www.timescale.com/) & [TimescaleDB Toolkit 1.27.0](https://github.com/timescale/timescaledb-toolkit) & [pgAgent 4.2.3](https://www.pgadmin.org/docs/pgadmin4/development/pgagent.html) & [pgVector 0.8.7](https://github.com/pgvector/pgvector)
+## [PostgreSql 18](https://www.postgresql.org/) & [Postgis 3.6.4](https://postgis.net/) & [TimescaleDB 2.31.0](https://www.timescale.com/) & [TimescaleDB Toolkit 1.27.0](https://github.com/timescale/timescaledb-toolkit) & [pgAgent 4.2.3](https://www.pgadmin.org/docs/pgadmin4/development/pgagent.html) & [pgVector 0.8.7](https://github.com/pgvector/pgvector) & [VectorChord 1.1.1](https://github.com/tensorchord/VectorChord)
 
 #### Upgrading from version 5.x
 
@@ -84,6 +84,21 @@ Sets the maximum number of connections that PostgreSql will accept.
 Setting this higher could lead to more memory usage.
 
 Example: `max_connections=30`
+
+#### Option: `vectorchord`
+
+Loads the [VectorChord](https://github.com/tensorchord/VectorChord) extension (`vchord`) at startup, which [Immich](https://immich.app/) needs for its smart search and face recognition. Off by default, as only Immich needs it; changing it needs a restart of the add-on.
+
+To use the database for [Immich](https://immich.app/), turn the option on, restart the add-on, and prepare a database once (for example in pgAdmin, or `psql` in the add-on console):
+
+```sql
+CREATE DATABASE immich;
+\c immich
+CREATE EXTENSION vchord CASCADE;
+CREATE EXTENSION earthdistance CASCADE;
+```
+
+Then point Immich at it with `DB_URL=postgresql://postgres:<password>@<home assistant host>:5432/immich` (map the port in the Network section). `vchord CASCADE` also installs pgvector, which VectorChord builds on.
 
 #### Option: `system_packages`
 

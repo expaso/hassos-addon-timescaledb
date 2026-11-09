@@ -200,6 +200,8 @@ elif [ "$1" == "build-dependencies" ]; then
         build_dependency postgresql-extension-system-stat-pg18 "3.2"
         build_dependency pgvector-pg17 "0.8.7"
         build_dependency pgvector-pg18 "0.8.7"
+        build_dependency vectorchord-pg17 "1.1.1"
+        build_dependency vectorchord-pg18 "1.1.1"
     else
         printInColor "Building dependency $2.."
         build_dependency "$2" "$3"
