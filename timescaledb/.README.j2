@@ -220,26 +220,30 @@ This addon implements a robust backup and restore mechanism designed to protect 
 
 When Home Assistant's backup system runs, it automatically:
 
-1. **Pre-Backup**: Executes `pg_dumpall` to create a complete SQL dump of all databases (`backup_db.sql`)
-2. **Backup**: Backs up the SQL dump file along with other addon data (but excludes the PostgreSQL data directory)
-3. **Post-Backup**: Removes the temporary SQL dump file to save space
+1. **Pre-Backup**: Dumps every database with `pg_dump` in its compressed custom format, and the roles with `pg_dumpall --globals-only`, into `/data/backup`
+2. **Backup**: Backs up the dump along with other addon data (but excludes the PostgreSQL data directory)
+3. **Post-Backup**: Removes the dump again to save space
 
 This approach has several advantages:
 
-- **Consistency**: SQL dumps are transaction-consistent snapshots
+- **Consistency**: Each database dump is a transaction-consistent snapshot
 - **Safety**: No risk of backing up corrupted or in-transition database files
-- **Portability**: SQL dumps can be restored across different PostgreSQL versions
-- **Small Size**: Excludes the large PostgreSQL data directory from backup
+- **Small Size**: The dump is compressed (zstd), and the large PostgreSQL data directory is excluded from the backup
+
+**Disk space:** the dump always leaves at least 1 GiB free on the data partition. When there is less space, or the free space drops below that while dumping, the dump is stopped and removed again, and an error is logged: PostgreSQL never runs out of disk because of a backup. The Home Assistant backup then does not contain the database, so free up disk space and back up again.
 
 ### How Restore Works
 
 When you restore a Home Assistant backup:
 
-1. The addon starts up with the restored `backup_db.sql` file
+1. The addon starts up with the restored dump in `/data/backup`
 2. If the PostgreSQL data directory is missing or corrupted, the addon:
    - Initializes a fresh PostgreSQL database
-   - Automatically restores all data from the SQL dump
-   - Removes the SQL dump after successful restoration
+   - Restores the roles, then every database the way TimescaleDB prescribes (`timescaledb_pre_restore()`, `pg_restore`, `timescaledb_post_restore()`)
+   - Moves every sequence up to at least the highest id in its table, so inserts cannot fail with a duplicate key afterwards
+   - Removes the dump after successful restoration
+
+Backups of older addon versions contain a plain SQL dump (`/data/backup_db.sql`, or `backup_db.sql.gz`). These are still restored, with the same TimescaleDB restore steps added.
 
 This automatic recovery process ensures your data is safely restored even if:
 
@@ -251,22 +255,25 @@ This automatic recovery process ensures your data is safely restored even if:
 
 You can also create manual backups using the PostgreSQL command-line tools:
 
-**Create a backup:**
+**Create a backup of one database:**
 
 ```bash
-docker exec addon_timescaledb_timescaledb su - postgres -c "pg_dumpall -U postgres --clean --if-exists -f /data/manual_backup_$(date +%Y%m%d).sql"
+docker exec addon_timescaledb_timescaledb su - postgres -c "pg_dump -U postgres -d homeassistant -Fc -f /data/manual_homeassistant_$(date +%Y%m%d).dump"
 ```
 
-**Restore from a manual backup:**
+**Restore it into an empty database:**
 
 ```bash
-docker exec addon_timescaledb_timescaledb su - postgres -c "psql -U postgres -f /data/manual_backup_YYYYMMDD.sql -d postgres"
+docker exec addon_timescaledb_timescaledb su - postgres -c "psql -U postgres -d homeassistant -c 'SELECT timescaledb_pre_restore();'"
+docker exec addon_timescaledb_timescaledb su - postgres -c "pg_restore -U postgres -d homeassistant /data/manual_homeassistant_YYYYMMDD.dump"
+docker exec addon_timescaledb_timescaledb su - postgres -c "psql -U postgres -d homeassistant -c 'SELECT timescaledb_post_restore();'"
 ```
+
+Do not use `pg_restore -j` (parallel): it does not restore the TimescaleDB catalog correctly.
 
 ### Important Notes
 
-- The SQL dump is only present during the backup process and is automatically cleaned up
-- If you need to keep a copy of the backup SQL file, copy it before the backup completes
+- The dump is only present during the backup process and is automatically cleaned up
 - The PostgreSQL data directory (`/data/postgres/*`) is excluded from backups to reduce backup size and improve reliability
 - Restore is automatic - no manual intervention required when restoring from a Home Assistant backup
 
@@ -274,18 +281,13 @@ docker exec addon_timescaledb_timescaledb su - postgres -c "psql -U postgres -f 
 
 **If restore fails:**
 
-1. Check the addon logs for detailed error messages
-2. The backup SQL file will be preserved at `/data/backup_db.sql` for manual recovery
-3. You can attempt manual restoration using:
-
-   ```bash
-   docker exec -it addon_timescaledb_timescaledb su - postgres -c "psql -U postgres -f /data/backup_db.sql -d postgres"
-   ```
+1. Check the addon logs and `/var/log/timescaledb.restore.log` in the addon for detailed error messages
+2. The dump is preserved in `/data/backup` (or `/data/backup_db.sql` for older backups) for manual recovery
 
 **If backup fails:**
 
 - Check that PostgreSQL is running during the backup
-- Ensure there's sufficient disk space for the SQL dump
+- Ensure there's sufficient disk space: the compressed dump plus 1 GiB
 - Review the addon logs for specific error messages
 
 ### Now what..
