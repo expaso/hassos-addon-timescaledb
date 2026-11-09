@@ -3,22 +3,29 @@ name: Deploy
 
 # yamllint disable-line rule:truthy
 on:
+  push:
+    branches:
+      - main
   release:
     types:
       - published
-  workflow_run:
-    workflows: ["CI"]
-    branches: [main]
-    types:
-      - completed
 
-permissions:
-  contents: read
-  packages: write
+permissions: {}
 
 jobs:
-  workflows:
-    uses: hassio-addons/workflows/.github/workflows/app-deploy.yaml@main
+  ci:
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+    uses: hassio-addons/workflows/.github/workflows/app-ci.yaml@adec4b96071354cc44924a6ef9975ff60cf9ddd9 # v5.0.0
+  deploy:
+    needs: ci
+    permissions:
+      contents: read
+      packages: write
+    uses: hassio-addons/workflows/.github/workflows/app-deploy.yaml@adec4b96071354cc44924a6ef9975ff60cf9ddd9 # v5.0.0
     with:
       repository: "hassos-addons"
       repository_edge: "hassos-addons-edge"
