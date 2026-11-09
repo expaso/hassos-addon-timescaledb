@@ -34,8 +34,10 @@ applyPermissions () {
 
 # Initializes the data directory
 # $1: Optional extra arguments for initdb
+# $2: Optional password authentication method for pg_hba.conf (default: scram-sha-256)
 initializeDataDirectory () {
 	local INITDB_ARGS=${1:-}
+	local AUTH_METHOD=${2:-scram-sha-256}
 	# Init data-directory
     bashio::log.info "Initializing new postgres directory.."
 	mkdir -p ${POSTGRES_DATA}
@@ -46,10 +48,10 @@ initializeDataDirectory () {
 	
 	# Set Password protect IPv4 hosts by default
 	{
-		echo "host    all             all             0.0.0.0/0               md5"
+		echo "host    all             all             0.0.0.0/0               ${AUTH_METHOD}"
 		# Set Password protect IPv6 hosts by default
-		echo "host    all             all             ::/0                    md5"
-		echo "local    all             all                                    md5"
+		echo "host    all             all             ::/0                    ${AUTH_METHOD}"
+		echo "local    all             all                                    ${AUTH_METHOD}"
 		echo "local    all             all                                   peer"
 	} >> "${POSTGRES_DATA}/pg_hba.conf"
 	# Set Listen on all addresses (*)
@@ -159,7 +161,9 @@ upgradePostgreSQL() {
 	if [[ "${OLD_CONTROLDATA}" =~ Data\ page\ checksum\ version:[[:space:]]*0($'\n'|$) ]]; then
 		INITDB_ARGS="--no-data-checksums"
 	fi
-	initializeDataDirectory "${INITDB_ARGS}"
+	# Keep md5 for an upgraded cluster: its roles may still have MD5 password hashes, which
+	# scram-sha-256 rejects, while md5 accepts both MD5 and SCRAM hashes.
+	initializeDataDirectory "${INITDB_ARGS}" "md5"
 
 	# And upgrade!
 	bashio::log.notice "Upgrading databases.."
@@ -224,7 +228,13 @@ fi
 if bashio::var.true "${NEW_INSTALL}"; then
 	touch /data/firstrun
 	echo "${BUILD_TIMESTAMP}" > ${VERSION_FILE}
-	initializeDataDirectory
+	# New installations use scram-sha-256 (PostgreSQL 18 deprecates MD5 passwords). A restore
+	# keeps md5: the restored roles may still have MD5 password hashes.
+	if bashio::var.true "${RESTORE_MODE}"; then
+		initializeDataDirectory "" "md5"
+	else
+		initializeDataDirectory
+	fi
 	
 	# Restore from backup if available
 	if bashio::var.true "${RESTORE_MODE}"; then
