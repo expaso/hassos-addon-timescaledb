@@ -1,0 +1,38 @@
+ARG ALPINE_VERSION=3.24
+FROM alpine:${ALPINE_VERSION}
+ARG VERSION
+ARG TARGETARCH
+ARG TARGETVARIANT
+ARG PG_MAJOR=18
+
+# -----------------------------------------------------------------
+# VectorChord (vchord, needed by Immich), built against the PostgreSQL package of this
+# Alpine release with Alpine's own Rust. Its xtask builds the extension, no cargo-pgrx needed
+# (pgrx runs rustfmt on the generated bindings).
+# -----------------------------------------------------------------
+# hadolint ignore=DL3018,DL3003
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    --mount=type=cache,id=cargo-registry-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo/registry \
+    set -ex \
+    && apk update \
+    && apk add \
+        build-base \
+        ca-certificates \
+        cargo \
+        clang \
+        clang-libclang \
+        git \
+        postgresql${PG_MAJOR} \
+        postgresql${PG_MAJOR}-dev \
+        rust \
+        rustfmt \
+    && git clone --branch "${VERSION}" --depth 1 https://github.com/tensorchord/VectorChord.git /build \
+    && cd /build \
+    && export PG_CONFIG="/usr/libexec/postgresql${PG_MAJOR}/pg_config" \
+    && make build \
+    && make install \
+    && cd / \
+    && rm -rf /build
+
+LABEL \
+    org.opencontainers.image.source="https://github.com/expaso/hassos-addon-timescaledb"
