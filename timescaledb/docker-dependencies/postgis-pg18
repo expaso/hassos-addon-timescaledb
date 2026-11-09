@@ -1,0 +1,42 @@
+ARG ALPINE_VERSION=3.24
+FROM alpine:${ALPINE_VERSION}
+ARG VERSION
+ARG TARGETARCH
+ARG TARGETVARIANT
+ARG PG_MAJOR=18
+
+# -----------------------------------------------------------------
+# PostGIS, built against the PostgreSQL package of this Alpine release
+# -----------------------------------------------------------------
+# hadolint ignore=DL3018,DL3003
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    && apk update \
+    && apk add \
+        build-base \
+        ca-certificates \
+        gdal-dev \
+        geos-dev \
+        json-c-dev \
+        libxml2-dev \
+        perl \
+        proj-dev \
+        protobuf-c-dev \
+        tar \
+        wget \
+        postgresql${PG_MAJOR} \
+        postgresql${PG_MAJOR}-dev \
+    && CLANG_VERSION="$(sed -n 's/^CLANG = clang-//p' "/usr/lib/postgresql${PG_MAJOR}/pgxs/src/Makefile.global")" \
+    && apk add "clang${CLANG_VERSION}" "llvm${CLANG_VERSION}" \
+    && mkdir -p /build \
+    && wget --progress=dot:giga -P /build "https://download.osgeo.org/postgis/source/postgis-${VERSION}.tar.gz" \
+    && tar -xzf "/build/postgis-${VERSION}.tar.gz" -C /build \
+    && cd "/build/postgis-${VERSION}" \
+    && ./configure --with-pgconfig="/usr/libexec/postgresql${PG_MAJOR}/pg_config" \
+    && make -j"$(nproc)" \
+    && make install \
+    && cd / \
+    && rm -rf /build
+
+LABEL \
+    org.opencontainers.image.source="https://github.com/expaso/hassos-addon-timescaledb"

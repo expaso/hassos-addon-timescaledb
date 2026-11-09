@@ -1,70 +1,42 @@
-
-FROM timescale/timescaledb:latest-pg17 AS timescale-pg17
-
-# --------------------------------------
-# PostGIS - Build and install OLD Postgis (for upgrade reasons)
-# --------------------------------------
+ARG ALPINE_VERSION=3.24
+FROM alpine:${ALPINE_VERSION}
 ARG VERSION
 ARG TARGETARCH
 ARG TARGETVARIANT
+ARG PG_MAJOR=17
 
-# PostGIS - Add required packages for runtime (see postgis dependencies)
-# hadolint ignore=DL3018
+# -----------------------------------------------------------------
+# PostGIS, built against the PostgreSQL package of this Alpine release
+# -----------------------------------------------------------------
+# hadolint ignore=DL3018,DL3003
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk update \
-    && apk add  \
-	openexr \ 
-    poppler \
-    gdal \
-    geos \
-    json-c \
-    libgcc \
-    libpq \
-    libstdc++ \
-    libxml2 \ 
-    musl \
-    pcre \
-    perl \
-    proj \
-    protobuf-c
+    && apk add \
+        build-base \
+        ca-certificates \
+        gdal-dev \
+        geos-dev \
+        json-c-dev \
+        libxml2-dev \
+        perl \
+        proj-dev \
+        protobuf-c-dev \
+        tar \
+        wget \
+        postgresql${PG_MAJOR} \
+        postgresql${PG_MAJOR}-dev \
+    && CLANG_VERSION="$(sed -n 's/^CLANG = clang-//p' "/usr/lib/postgresql${PG_MAJOR}/pgxs/src/Makefile.global")" \
+    && apk add "clang${CLANG_VERSION}" "llvm${CLANG_VERSION}" \
+    && mkdir -p /build \
+    && wget --progress=dot:giga -P /build "https://download.osgeo.org/postgis/source/postgis-${VERSION}.tar.gz" \
+    && tar -xzf "/build/postgis-${VERSION}.tar.gz" -C /build \
+    && cd "/build/postgis-${VERSION}" \
+    && ./configure --with-pgconfig="/usr/libexec/postgresql${PG_MAJOR}/pg_config" \
+    && make -j"$(nproc)" \
+    && make install \
+    && cd / \
+    && rm -rf /build
 
-# hadolint ignore=DL3018, DL3003
-RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
-    set -ex \
-    && apk update \
-    && apk add --virtual .fetch-deps \
-                ca-certificates \
-                git \
-                openssl \
-                openssl-dev \
-                tar \
-                wget \
-    && mkdir -p /build/ \
-    && wget --progress=dot:giga -P /build https://download.osgeo.org/postgis/source/postgis-${VERSION}.tar.gz \
-    && apk add --virtual .build-deps \
-                coreutils \
-                gcc \
-                make \
-                cmake \
-                build-base \
-                libxml2-dev \
-                protobuf-c-dev \
-                clang19 \
-                llvm19 \
-    && apk add --virtual .community-build-deps \
-                geos-dev \
-                proj-dev \
-                gdal-dev \
-    && cd /build \
-    && tar xvzf postgis-${VERSION}.tar.gz \
-    && cd /build/postgis-${VERSION} \
-    && ./configure --with-pgconfig=/usr/local/bin/pg_config \
-    && make && make install \
-    && cd ~ \
-    && apk del .fetch-deps .build-deps .community-build-deps \
-    && rm -rf /build 
-
-# Labels
 LABEL \
     org.opencontainers.image.source="https://github.com/expaso/hassos-addon-timescaledb"

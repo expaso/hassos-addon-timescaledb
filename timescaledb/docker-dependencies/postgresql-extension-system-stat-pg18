@@ -1,0 +1,31 @@
+ARG ALPINE_VERSION=3.24
+FROM alpine:${ALPINE_VERSION}
+ARG VERSION
+ARG TARGETARCH
+ARG TARGETVARIANT
+ARG PG_MAJOR=18
+
+# -----------------------------------------------------------------
+# system_stats, built against the PostgreSQL package of this Alpine release
+# -----------------------------------------------------------------
+# hadolint ignore=DL3018,DL3003
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    && apk update \
+    && apk add \
+        build-base \
+        ca-certificates \
+        git \
+        postgresql${PG_MAJOR} \
+        postgresql${PG_MAJOR}-dev \
+    && CLANG_VERSION="$(sed -n 's/^CLANG = clang-//p' "/usr/lib/postgresql${PG_MAJOR}/pgxs/src/Makefile.global")" \
+    && apk add "clang${CLANG_VERSION}" "llvm${CLANG_VERSION}" \
+    && git clone --branch "v${VERSION}" --depth 1 https://github.com/EnterpriseDB/system_stats.git /build/system-stats \
+    && cd /build/system-stats \
+    && make -j"$(nproc)" USE_PGXS=1 PG_CONFIG="/usr/libexec/postgresql${PG_MAJOR}/pg_config" \
+    && make install USE_PGXS=1 PG_CONFIG="/usr/libexec/postgresql${PG_MAJOR}/pg_config" \
+    && cd / \
+    && rm -rf /build
+
+LABEL \
+    org.opencontainers.image.source="https://github.com/expaso/hassos-addon-timescaledb"

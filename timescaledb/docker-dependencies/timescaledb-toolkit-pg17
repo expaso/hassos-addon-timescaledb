@@ -1,71 +1,52 @@
-FROM timescale/timescaledb:latest-pg17 AS timescale-pg17
-
-FROM timescale-pg17 AS timescaledb-toolkit
+ARG ALPINE_VERSION=3.24
+FROM alpine:${ALPINE_VERSION}
 ARG VERSION
 ARG TARGETARCH
 ARG TARGETVARIANT
+ARG PG_MAJOR=17
+SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 
-# hadolint ignore=DL3018, SC3014
+# -----------------------------------------------------------------
+# TimescaleDB Toolkit (Rust/pgrx), built against the PostgreSQL package of this Alpine release
+# -----------------------------------------------------------------
+# Alpine's own Rust: rustup's aarch64 musl toolchain links binaries with the glibc loader
+# hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
-    --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
+    --mount=type=cache,id=cargo-registry-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo/registry \
     set -ex \
     && apk update \
-    && if [ "$TARGETARCH" == "amd64" ] || [ "$TARGETARCH" == "arm64" ]; then \
-            apk add \
-                        ca-certificates \
-                        git \
-                        openssl \
-                        openssl-dev \
-                        pkgconf \
-                        tar \
-                        wget \
-                        curl \
-            && apk add \
-                        coreutils \
-                        gcc \
-                        make \
-                        cmake \
-                        build-base \
-            && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable \
-            && export PATH="/root/.cargo/bin:${PATH}" \
-            && export OPENSSL_DIR=/usr \
-            && cargo install --version '=0.16.1' --locked --force cargo-pgrx \
-            && cargo install --force rustfmt; \
-       fi
-
-# Add compatibility libraries for timescaledb toolkit
-# hadolint ignore=DL3018, SC3014
-RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
-    set -ex \
-    && apk update \
-    && if [ "$TARGETARCH" == "amd64" ] || [ "$TARGETARCH" == "arm64" ]; then \
-        apk add gcompat clang16-libclang clang15-libclang; \
-    fi
+    && apk add \
+        build-base \
+        ca-certificates \
+        cargo \
+        clang \
+        clang-libclang \
+        git \
+        openssl-dev \
+        pkgconf \
+        postgresql${PG_MAJOR} \
+        postgresql${PG_MAJOR}-dev \
+        rust \
+        rustfmt \
+    && cargo install --locked --root /usr/local --version '=0.18.1' cargo-pgrx
 
 ENV RUST_MIN_STACK=4194304
-# hadolint ignore=DL3003, SC3014
-RUN --mount=type=cache,id=pgrx-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.pgrx \
-    --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
-    set -ex \
-    && if [ "$TARGETARCH" == "amd64" ] || [ "$TARGETARCH" == "arm64" ]; then \
-        export PATH="/root/.cargo/bin:${PATH}" \
-        && export RUSTFLAGS="-C target-feature=-crt-static -C codegen-units=1" \
-        && mkdir -p /build/ \
-        && cd /build \
-            && git clone https://github.com/timescale/timescaledb-toolkit.git . \
-            && git checkout ${VERSION} \
-            && cd extension \
-            # initdb fails as root so generate the correct config ourselves
-            # && cargo pgx init --pg17 /usr/lib/postgresql/17/bin/pg_config
-            && mkdir -p /root/.pgrx \
-            && printf '[configs]\npg17="/usr/local/bin/pg_config"\n' > /root/.pgrx/config.toml \
-            && cargo pgrx install --release \
-            && cargo run --manifest-path ../tools/post-install/Cargo.toml -- /usr/local/bin/pg_config \
-        && cd ~ \
-        && rm -rf /build \
-        && echo "OK" /toolkit; \
-    fi
 
-# Labels
+# Docker tags cannot contain '+': a VERSION like 1.27.0-p2 builds git tag 1.27.0+p2
+# hadolint ignore=DL3003
+RUN --mount=type=cache,id=cargo-registry-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo/registry \
+    set -ex \
+    && PG_CONFIG="/usr/libexec/postgresql${PG_MAJOR}/pg_config" \
+    && mkdir -p /build /root/.pgrx \
+    && cd /build \
+    && git clone https://github.com/timescale/timescaledb-toolkit.git . \
+    && git checkout "$(echo "${VERSION}" | sed "s/-p\([0-9]*\)$/+p\1/")" \
+    && cd extension \
+    && printf '[configs]\npg%s="%s"\n' "${PG_MAJOR}" "${PG_CONFIG}" > /root/.pgrx/config.toml \
+    && cargo pgrx install --release --pg-config "${PG_CONFIG}" \
+    && cargo run --manifest-path ../tools/post-install/Cargo.toml -- "${PG_CONFIG}" \
+    && cd / \
+    && rm -rf /build /root/.pgrx
+
 LABEL \
     org.opencontainers.image.source="https://github.com/expaso/hassos-addon-timescaledb"

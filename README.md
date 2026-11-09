@@ -14,7 +14,7 @@ PostgreSQL has earned a strong reputation for its proven architecture, reliabili
 
 ## TimescaleDB Overview
 
-From: https://docs.timescale.com/latest/introduction
+From: https://www.tigerdata.com/docs/about/latest
 
 TimescaleDB is an open-source time-series database optimized for fast ingest and complex queries. It speaks "full SQL" and is correspondingly easy to use like a traditional relational database, yet scales in ways previously reserved for NoSQL databases.
 
@@ -81,9 +81,6 @@ pull one of the images for the desired architecture from docker hub:
 ```
 docker pull ghcr.io/expaso/timescaledb/amd64:stable
 docker pull ghcr.io/expaso/timescaledb/aarch64:stable
-docker pull ghcr.io/expaso/timescaledb/armv7:stable
-docker pull ghcr.io/expaso/timescaledb/armhf:stable
-docker pull ghcr.io/expaso/timescaledb/i386:stable
 ```
 
 You can replace latest with the version number you want to use.

@@ -1,46 +1,32 @@
-FROM timescale/timescaledb:latest-pg17 AS timescale-pg17
-
-FROM timescale-pg17 AS pgvector
+ARG ALPINE_VERSION=3.24
+FROM alpine:${ALPINE_VERSION}
 ARG VERSION
 ARG TARGETARCH
 ARG TARGETVARIANT
+ARG PG_MAJOR=17
 
-# --------------------------------------------
-# pgVector - build and install
-# --------------------------------------------
-# hadolint ignore=DL3018, DL3003
+# -----------------------------------------------------------------
+# pgvector, built against the PostgreSQL package of this Alpine release
+# -----------------------------------------------------------------
+# OPTFLAGS="" avoids -march=native, so the extension runs on any CPU of the architecture
+# hadolint ignore=DL3018,DL3003
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk update \
-    && apk add --virtual .fetch-deps \
-                ca-certificates \
-                git \
-                openssl \
-                openssl-dev \
-                tar \
-                wget \
-    && mkdir -p /build/ \
-    && apk add --virtual .build-deps \
-                coreutils \
-                gcc \
-                make \
-                cmake \
-				build-base \
-                libxml2-dev \
-                protobuf-c-dev \
-                clang19 \
-                llvm19 \
-    && mkdir -p /build \
-        && cd /build \
-        && git clone --branch v${VERSION} https://github.com/pgvector/pgvector.git \
-        && cd pgvector \
-        && make \
-        && make install \
-    && cd ~ \
-    && apk del .fetch-deps .build-deps \
-    && rm -rf /build 
+    && apk add \
+        build-base \
+        ca-certificates \
+        git \
+        postgresql${PG_MAJOR} \
+        postgresql${PG_MAJOR}-dev \
+    && CLANG_VERSION="$(sed -n 's/^CLANG = clang-//p' "/usr/lib/postgresql${PG_MAJOR}/pgxs/src/Makefile.global")" \
+    && apk add "clang${CLANG_VERSION}" "llvm${CLANG_VERSION}" \
+    && git clone --branch "v${VERSION}" --depth 1 https://github.com/pgvector/pgvector.git /build/pgvector \
+    && cd /build/pgvector \
+    && make -j"$(nproc)" OPTFLAGS="" PG_CONFIG="/usr/libexec/postgresql${PG_MAJOR}/pg_config" \
+    && make install PG_CONFIG="/usr/libexec/postgresql${PG_MAJOR}/pg_config" \
+    && cd / \
+    && rm -rf /build
 
-
-# Labels
 LABEL \
     org.opencontainers.image.source="https://github.com/expaso/hassos-addon-timescaledb"

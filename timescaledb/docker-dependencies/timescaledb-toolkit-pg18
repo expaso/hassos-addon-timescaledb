@@ -1,0 +1,52 @@
+ARG ALPINE_VERSION=3.24
+FROM alpine:${ALPINE_VERSION}
+ARG VERSION
+ARG TARGETARCH
+ARG TARGETVARIANT
+ARG PG_MAJOR=18
+SHELL ["/bin/ash", "-o", "pipefail", "-c"]
+
+# -----------------------------------------------------------------
+# TimescaleDB Toolkit (Rust/pgrx), built against the PostgreSQL package of this Alpine release
+# -----------------------------------------------------------------
+# Alpine's own Rust: rustup's aarch64 musl toolchain links binaries with the glibc loader
+# hadolint ignore=DL3018
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    --mount=type=cache,id=cargo-registry-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo/registry \
+    set -ex \
+    && apk update \
+    && apk add \
+        build-base \
+        ca-certificates \
+        cargo \
+        clang \
+        clang-libclang \
+        git \
+        openssl-dev \
+        pkgconf \
+        postgresql${PG_MAJOR} \
+        postgresql${PG_MAJOR}-dev \
+        rust \
+        rustfmt \
+    && cargo install --locked --root /usr/local --version '=0.18.1' cargo-pgrx
+
+ENV RUST_MIN_STACK=4194304
+
+# Docker tags cannot contain '+': a VERSION like 1.27.0-p2 builds git tag 1.27.0+p2
+# hadolint ignore=DL3003
+RUN --mount=type=cache,id=cargo-registry-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo/registry \
+    set -ex \
+    && PG_CONFIG="/usr/libexec/postgresql${PG_MAJOR}/pg_config" \
+    && mkdir -p /build /root/.pgrx \
+    && cd /build \
+    && git clone https://github.com/timescale/timescaledb-toolkit.git . \
+    && git checkout "$(echo "${VERSION}" | sed "s/-p\([0-9]*\)$/+p\1/")" \
+    && cd extension \
+    && printf '[configs]\npg%s="%s"\n' "${PG_MAJOR}" "${PG_CONFIG}" > /root/.pgrx/config.toml \
+    && cargo pgrx install --release --pg-config "${PG_CONFIG}" \
+    && cargo run --manifest-path ../tools/post-install/Cargo.toml -- "${PG_CONFIG}" \
+    && cd / \
+    && rm -rf /build /root/.pgrx
+
+LABEL \
+    org.opencontainers.image.source="https://github.com/expaso/hassos-addon-timescaledb"

@@ -11,8 +11,15 @@ UPDATE=false;
 VERSION_FILE=/data/version
 BUILD_TIMESTAMP="$(cat /build-timestamp)"
 
+# Returns success when extension $2 is installed in database $1.
+# Compares the query result instead of piping to 'grep -q': under bashio's pipefail,
+# grep closing the pipe early can make an installed extension look missing.
+extensionInstalled () {
+	[[ "$(psql -X -U postgres -d "${1}" -tAc "select 1 from pg_extension where extname = '${2}';")" == "1" ]]
+}
+
 # Check for updates
-if [[ $(< ${VERSION_FILE}) != ${BUILD_TIMESTAMP} ]]; then
+if [[ $(< ${VERSION_FILE}) != "${BUILD_TIMESTAMP}" ]]; then
 	UPDATE=true
 fi
 
@@ -24,7 +31,7 @@ done
 # Check if we need to update..
 if bashio::var.true "${UPDATE}"; then
 	bashio::log.info "PgAgent: Waiting for update to complete.."
-	while [[ $(< ${VERSION_FILE}) != ${BUILD_TIMESTAMP} ]]; do
+	while [[ $(< ${VERSION_FILE}) != "${BUILD_TIMESTAMP}" ]]; do
 		sleep 3
 		bashio::log.info "PgAgent: Waiting for update to complete.."
 	done
@@ -34,10 +41,17 @@ if bashio::var.true "${UPDATE}"; then
 fi
 
 # Enable pgAgent extension on postgres database
-if ! (psql -X -U postgres -d "postgres" -c "select 1 from pg_extension where extname = 'pgagent';" | grep -q 1); then
+if ! extensionInstalled "postgres" pgagent; then
 	bashio::log.info "Enabling PgAgent Extension.."
 	psql -U "postgres" -d "postgres" -c "CREATE EXTENSION IF NOT EXISTS pgagent;" || true >> /var/log/pgagent.run.log
 fi;
+
+# Remove agent registrations left behind by a pgAgent that did not exit cleanly.
+# They are keyed on the backend pid, so a stale row would make the restart fail
+# with a duplicate key on pga_jobagent_pkey.
+psql -X -U postgres -d postgres -q \
+	-c "DELETE FROM pgagent.pga_jobagent WHERE jagpid NOT IN (SELECT pid FROM pg_stat_activity);" \
+	|| bashio::log.warning "Could not clean up stale pgAgent registrations"
 
 # Create a tmpfs for the pgagent log
 mkdir -p "/data/tmp/pgagent"

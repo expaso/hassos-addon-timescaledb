@@ -14,8 +14,15 @@ VERSION_FILE=/data/version
 BUILD_TIMESTAMP="$(cat /build-timestamp)"
 UPDATE=false
 
+# Returns success when extension $2 is installed in database $1.
+# Compares the query result instead of piping to 'grep -q': under bashio's pipefail,
+# grep closing the pipe early can make an installed extension look missing.
+extensionInstalled () {
+	[[ "$(psql -X -U postgres -d "${1}" -tAc "select 1 from pg_extension where extname = '${2}';")" == "1" ]]
+}
+
 # Check if we need to update
-if [[ $(cat ${VERSION_FILE}) != ${BUILD_TIMESTAMP} ]]; then
+if [[ $(cat ${VERSION_FILE}) != "${BUILD_TIMESTAMP}" ]]; then
 	UPDATE=true
 fi
 
@@ -51,26 +58,27 @@ if bashio::var.true "${UPDATE}"; then
 		-t \
 		--field-separator ' ' \
 		--quiet \
-	| while read datname; do
+	| while read -r datname; do
 		# Update Timescale extension when needed
-		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'timescaledb';" | grep -q 1 \
+		extensionInstalled "${datname}" timescaledb \
 		&& bashio::log.info "Try updating Timescale Extension for database: '${datname}'.." \
-		&& psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb UPDATE;" || true >> /var/log/timescaledb.upgrade.log
+		&& (psql -X -U postgres -d "${datname}" -f /usr/share/timescaledb/drop_timescaledb_extras.sql || true) \
+		&& psql -X -U postgres -d "${datname}" -c "ALTER EXTENSION timescaledb UPDATE;" || true >> /var/log/timescaledb.upgrade.log
 
 		# Update Postgis when extension needed
-		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'postgis';" | grep -q 1 \
+		extensionInstalled "${datname}" postgis \
 		&& bashio::log.info "Try updating Postgis Extension for database: '${datname}'.." \
-		&& psql -X -U postgres -d ${datname} -c "SELECT PostGIS_Extensions_Upgrade();" || true >> /var/log/postgis.upgrade.log
+		&& psql -X -U postgres -d "${datname}" -c "SELECT PostGIS_Extensions_Upgrade();" || true >> /var/log/postgis.upgrade.log
 
 		# Update TimescaleDb Toolkit extension when needed
-		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'timescaledb_toolkit';" | grep -q 1 \
+		extensionInstalled "${datname}" timescaledb_toolkit \
 		&& bashio::log.info "Try updating TimescaleDb Toolkit Extension for database: '${datname}'.." \
-		&& psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb_toolkit UPDATE;" || true >> /var/log/timescaledb_toolkit.upgrade.log
+		&& psql -X -U postgres -d "${datname}" -c "ALTER EXTENSION timescaledb_toolkit UPDATE;" || true >> /var/log/timescaledb_toolkit.upgrade.log
 
 		# Update Vector extension when needed
-		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'vector';" | grep -q 1 \
+		extensionInstalled "${datname}" vector \
 		&& bashio::log.info "Try updating Vector Extension for database: '${datname}'.." \
-		&& psql -X -U postgres -d ${datname} -c "ALTER EXTENSION vector UPDATE;" || true >> /var/log/vector.upgrade.log
+		&& psql -X -U postgres -d "${datname}" -c "ALTER EXTENSION vector UPDATE;" || true >> /var/log/vector.upgrade.log
 
 	done
 fi
@@ -80,15 +88,20 @@ if bashio::config.has_value 'databases'; then
 	# Create all databases if not exist
 	for database in $(bashio::config "databases"); do
 		bashio::log.info "Create database if not exist: '${database}'"
-		psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '${database}'" | grep -q 1 || psql -U postgres -c "CREATE DATABASE ${database}"
+		# Compare the query result instead of piping to 'grep -q': under bashio's pipefail,
+		# grep closing the pipe early could report an existing database as missing.
+		if [[ "$(psql -X -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${database}'")" != "1" ]]; then
+			psql -X -U postgres -c "CREATE DATABASE ${database}" \
+				|| bashio::log.warning "Could not create database '${database}', continuing.."
+		fi
 	done
 	bashio::log.info "done"
 
 	# Enable the timescale-extensions for all indicated databases
 	for database in $(bashio::config "timescale_enabled"); do
-		if ! (psql -X -U postgres -d ${database} -c "select 1 from pg_extension where extname = 'timescaledb';" | grep -q 1); then
+		if ! extensionInstalled "${database}" timescaledb; then
 			bashio::log.info "Enabling Timescale Extension for database: '${database}'"
-			psql -U "postgres" -d ${database} -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;" || true >> /var/log/timescaledb.create.log
+			psql -U "postgres" -d "${database}" -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;" || true >> /var/log/timescaledb.create.log
 		fi;
 	done
 fi
@@ -103,7 +116,7 @@ if bashio::var.true "${UPDATE}"; then
 	sleep 3
 
 	# Don't fail on the call. When running in standalone, this will fail.
-	bashio::addon.restart || true
+	bashio::app.restart || true
 fi
 
 # And let it roll
