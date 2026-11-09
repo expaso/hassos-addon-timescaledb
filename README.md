@@ -143,58 +143,61 @@ https://www.postgresql.org/docs/devel/auth-pg-hba-conf.html
 
 ### PostgreSQL Configuration
 
-#### Option: `postgresql_config`
+#### Option: `postgresql_settings`
 
-Allows you to customize PostgreSQL server parameters. These settings are applied to `postgresql.conf` and can override default settings configured by the addon.
+Allows you to customize PostgreSQL server parameters, as a list of `name=value` entries. The add-on writes them to `/data/postgres/postgresql.user.conf`, which is included at the end of `postgresql.conf`, so they override the settings the addon configures itself (including TimescaleDB tuning).
 
 **Example:**
 
 ```yaml
-postgresql_config:
-  log_statement: "all"
-  log_min_duration_statement: "1000" # Log queries taking > 1 second
-  work_mem: "16MB"
-  maintenance_work_mem: "256MB"
-  effective_cache_size: "4GB"
-  random_page_cost: "1.1"
-  checkpoint_completion_target: "0.9"
+postgresql_settings:
+  - "log_statement=all"
+  - "log_min_duration_statement=1000"
+  - "work_mem=16MB"
+  - "maintenance_work_mem=256MB"
+  - "effective_cache_size=4GB"
+  - "random_page_cost=1.1"
+  - "checkpoint_completion_target=0.9"
 ```
+
+The value is written to the configuration as given. Quote values that contain spaces with single quotes, for example `"log_line_prefix='%m [%p] '"`. Settings of extensions work too, for example `"timescaledb.max_background_workers=16"`.
 
 See the [PostgreSQL documentation](https://www.postgresql.org/docs/current/runtime-config.html) for all available parameters and their meanings.
 
 **Important Notes:**
 
 - Configuration changes require a restart of the addon to take effect
-- Some critical parameters cannot be modified (e.g., `shared_preload_libraries`, `port`, `data_directory`) as they are managed by the addon
-- Invalid parameter names or values will be logged and skipped
-- Parameters are applied after TimescaleDB tuning, so you can override tuned values if needed
+- The file is rewritten on every start: removing an entry also removes the setting
+- Some critical parameters cannot be modified (e.g., `shared_preload_libraries`, `port`, `data_directory`) as they are managed by the addon; they are skipped with a warning in the log
+- Before PostgreSQL starts, the addon lets PostgreSQL check the settings. If it rejects one, all settings are ignored for that start and the error is shown in the log, so a typo cannot keep the database from starting
+- This option replaces `postgresql_config` from version 5.x, which never worked: Home Assistant drops option keys that are not listed by name
 
 **Common Use Cases:**
 
 **Performance Tuning:**
 
 ```yaml
-postgresql_config:
-  work_mem: "32MB"
-  maintenance_work_mem: "512MB"
-  effective_cache_size: "8GB"
+postgresql_settings:
+  - "work_mem=32MB"
+  - "maintenance_work_mem=512MB"
+  - "effective_cache_size=8GB"
 ```
 
 **Query Logging for Debugging:**
 
 ```yaml
-postgresql_config:
-  log_statement: "all"
-  log_duration: "on"
-  log_min_duration_statement: "500"
+postgresql_settings:
+  - "log_statement=all"
+  - "log_duration=on"
+  - "log_min_duration_statement=500"
 ```
 
 **Connection Settings:**
 
 ```yaml
-postgresql_config:
-  idle_in_transaction_session_timeout: "60000"
-  statement_timeout: "30000"
+postgresql_settings:
+  - "idle_in_transaction_session_timeout=60000"
+  - "statement_timeout=30000"
 ```
 
 #### Option: `pg_hba_config`
@@ -313,9 +316,9 @@ init_commands:
 **New way (recommended):**
 
 ```yaml
-postgresql_config:
-  log_statement: "all"
-  work_mem: "32MB"
+postgresql_settings:
+  - "log_statement=all"
+  - "work_mem=32MB"
 ```
 
 The new approach is simpler, safer, and easier to maintain. The `init_commands` option remains available for advanced use cases that aren't covered by the declarative configuration.

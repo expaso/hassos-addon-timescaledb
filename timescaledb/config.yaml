@@ -40,7 +40,7 @@ options:
   system_packages: []
   init_commands: []
   retry_upgrade: false
-  postgresql_config: {}
+  postgresql_settings: []
   pg_hba_config: []
 schema:
   databases:
@@ -57,8 +57,8 @@ schema:
   init_commands:
     - str
   retry_upgrade: bool?
-  postgresql_config:
-    match(^[a-z_]+$)?: str?
+  postgresql_settings:
+    - match(^[A-Za-z][A-Za-z0-9_.]*\s*=.+$)
   pg_hba_config:
     - type: list(local|host|hostssl|hostnossl)?
       database: str?
