@@ -12,9 +12,9 @@
 
 Version 6 upgrades your databases from PostgreSQL 17 to 18 automatically on the first start. Take a backup first; the upgrade can take a while on large databases.
 
+- New option `postgres_password` to set the password of the `postgres` user. New installations use `scram-sha-256` password authentication; existing installations keep `md5`.
 - Databases on PostgreSQL 15 or 16: install version 5.x first, which upgrades them to PostgreSQL 17, then update to version 6.
 - Version 6 only supports `aarch64` and `amd64`, like Home Assistant itself. Use version 5.x on `armhf`, `armv7` or `i386`.
-- New option `postgres_password` to set the password of the `postgres` user. New installations use `scram-sha-256` password authentication; existing installations keep `md5`.
 
 #### Configuation
 
