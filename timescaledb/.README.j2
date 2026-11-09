@@ -14,6 +14,7 @@ Version 6 upgrades your databases from PostgreSQL 17 to 18 automatically on the 
 
 - Databases on PostgreSQL 15 or 16: install version 5.x first, which upgrades them to PostgreSQL 17, then update to version 6.
 - Version 6 only supports `aarch64` and `amd64`, like Home Assistant itself. Use version 5.x on `armhf`, `armv7` or `i386`.
+- The `postgresql_config` option is replaced by `postgresql_settings` (a list of `name=value` entries). The old option never worked, so there is nothing to migrate.
 
 #### Configuation
 
@@ -101,21 +102,23 @@ Basically this will try to find the old database-files from Postgres 17, and res
 
 !! Please don't set this if you don't know what you are doing or before taking a backup. !!
 
-#### Option: `postgresql_config`
+#### Option: `postgresql_settings`
 
-Allows you to customize PostgreSQL server parameters. These settings are applied to `postgresql.conf` and can override default settings.
+Allows you to customize PostgreSQL server parameters, as a list of `name=value` entries. They are written to their own file that is included at the end of `postgresql.conf`, so they override the default settings. The file is rewritten on every start, so removing an entry also removes the setting.
 
 Example:
 ```yaml
-postgresql_config:
-  log_statement: "all"
-  work_mem: "16MB"
-  maintenance_work_mem: "256MB"
+postgresql_settings:
+  - "log_statement=all"
+  - "work_mem=16MB"
+  - "maintenance_work_mem=256MB"
 ```
+
+Quote values that contain spaces with single quotes, for example `"log_line_prefix='%m [%p] '"`.
 
 See [PostgreSQL documentation](https://www.postgresql.org/docs/current/runtime-config.html) for available parameters.
 
-**Note:** Some critical parameters cannot be modified (e.g., `shared_preload_libraries`, `port`, `data_directory`) as they are managed by the addon.
+**Note:** Some critical parameters cannot be modified (e.g., `shared_preload_libraries`, `port`, `data_directory`) as they are managed by the addon. If PostgreSQL rejects a setting, all settings are ignored for that start and the error is shown in the log. This option replaces `postgresql_config` of version 5.x, which never worked.
 
 #### Option: `pg_hba_config`
 

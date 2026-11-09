@@ -1,5 +1,7 @@
 # Design Document: PostgreSQL Configuration Management
 
+> **Note (version 6.0.0):** the `postgresql_config` option described here never worked: the Supervisor only keeps keys of a dictionary option that the schema lists by name, so the `match(...)` key dropped every setting. Version 6.0.0 replaces it with `postgresql_settings`, a list of `name=value` entries written to `postgresql.user.conf` (see README.md). `pg_hba_config` works as described.
+
 ## Overview
 
 This document describes the design for allowing users to customize PostgreSQL configuration files (`postgresql.conf` and `pg_hba.conf`) through Home Assistant addon configuration, replacing the current "advanced users only" approach of using shell commands.
