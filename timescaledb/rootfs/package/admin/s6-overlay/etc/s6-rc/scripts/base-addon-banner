@@ -9,6 +9,17 @@ declare RUNNING_IN_HA
 
 BUILD_TIMESTAMP="$(cat /build-timestamp)"
 
+# Standalone (plain Docker): there is no Supervisor to read the add-on options from. Since
+# base image 21, bashio returns an empty result instead of "{}" when the API cannot be
+# reached, which makes every option look set but empty: the base's log level service then
+# stops the container ("Unknown log_level:"). Without a Supervisor token, cache empty
+# options, so all scripts use their defaults as before, without trying the API every time.
+# Decided on the token, not on a failed ping: in Home Assistant a hiccup of the API must
+# not silently drop the configured options.
+if [[ -z "${SUPERVISOR_TOKEN:-}" ]]; then
+    bashio::cache.set "addons.self.options.config" "{}"
+fi
+
 set +u
 if bashio::supervisor.ping ; then
     RUNNING_IN_HA="true"
